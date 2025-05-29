@@ -1,0 +1,110 @@
+/Users/visheshyadav/test/retriever_agent.py:104: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-huggingface package and should be used instead. To use it run `pip install -U :class:`~langchain-huggingface` and import as `from :class:`~langchain_huggingface import HuggingFaceEmbeddings``.
+  self.embeddings = HuggingFaceEmbeddings(model_name=candidate)
+Device set to use mps:0
+INFO:     Started server process [18209]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8011 (Press CTRL+C to quit)
+Initializing embeddings with model: thenlper/gte-small
+[RetrieverAgent] Attempting to load embedding model: thenlper/gte-small
+[RetrieverAgent] Successfully loaded 'thenlper/gte-small'.
+No existing FAISS index found. A new one will be created upon adding documents.
+[LanguageAgent] Initializing local fallback model...
+[LanguageAgent] Local DistilBART model loaded successfully.
+[LanguageAgent] Successfully initialized Mistral AI client.
+INFO:     127.0.0.1:63460 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63464 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63510 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63523 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63527 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63529 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63535 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63546 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63552 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63554 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63556 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63561 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63563 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63569 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63571 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63573 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63580 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63583 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63587 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63590 - "GET /agents/status HTTP/1.1" 200 OK
+[LanguageAgent] Mistral API call failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}
+[LanguageAgent] Mistral summarization failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}. Falling back to local model.
+[VoiceAgent] Using macOS 'say' command for TTS.
+INFO:     127.0.0.1:63592 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63598 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63607 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63610 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63617 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63621 - "GET /agents/status HTTP/1.1" 200 OK
+[VoiceAgent] Using macOS 'say' command for TTS.
+INFO:     127.0.0.1:63623 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63626 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63650 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63829 - "GET /agents/status HTTP/1.1" 200 OK
+[LanguageAgent] Mistral API call failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}
+[LanguageAgent] Mistral explanation failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}. Falling back to local model.
+INFO:     127.0.0.1:63845 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63852 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63870 - "POST /intelligent/query HTTP/1.1" 200 OK
+[LanguageAgent] Mistral API call failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}
+[LanguageAgent] Mistral explanation failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}. Falling back to local model.
+INFO:     127.0.0.1:63897 - "POST /intelligent/query HTTP/1.1" 200 OK
+[LanguageAgent] Mistral API call failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}
+[LanguageAgent] Mistral explanation failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}. Falling back to local model.
+INFO:     127.0.0.1:63977 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63999 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64091 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64109 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64112 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64114 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64120 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64132 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64134 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64136 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64143 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64151 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64153 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64159 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64165 - "GET /agents/status HTTP/1.1" 200 OK
+[LanguageAgent] Mistral API call failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}
+[LanguageAgent] Mistral explanation failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}. Falling back to local model.
+INFO:     127.0.0.1:64167 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64170 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64176 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64179 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64183 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64185 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64188 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64194 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64200 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64326 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64334 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64344 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64357 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64362 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64364 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64367 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64390 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64393 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64395 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64403 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64405 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64407 - "POST /intelligent/query HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64411 - "GET /agents/status HTTP/1.1" 200 OK
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

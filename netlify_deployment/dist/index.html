@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Financial Assistant API</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        h1 { font-size: 3rem; margin-bottom: 1rem; font-weight: 700; }
+        p { font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.9; }
+        .api-status { 
+            background: rgba(40,167,69,0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            border: 1px solid rgba(40,167,69,0.5);
+        }
+        .endpoints {
+            text-align: left;
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+        .endpoint {
+            margin: 0.5rem 0;
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.2);
+            padding: 0.5rem;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 AI Financial Assistant API</h1>
+        <p>Multi-Agent Financial Intelligence Platform</p>
+        
+        <div class="api-status">
+            <h3>✅ API Status: Online</h3>
+            <p>Ready to process financial queries with AI agents</p>
+        </div>
+        
+        <div class="endpoints">
+            <h3>📡 Available Endpoints:</h3>
+            <div class="endpoint">POST /api/intelligent/query</div>
+            <div class="endpoint">POST /api/intelligent/voice</div>
+            <div class="endpoint">GET /api/agents/status</div>
+            <div class="endpoint">GET /api/health</div>
+        </div>
+        
+        <p style="margin-top: 2rem; font-size: 1rem; opacity: 0.7;">
+            Powered by Mistral AI • Deployed on Netlify • Real-time Financial Data
+        </p>
+    </div>
+</body>
+</html> 
