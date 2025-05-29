@@ -19,7 +19,9 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const path = event.path.replace('/.netlify/functions/orchestrator', '');
+    // Fix path parsing - Netlify passes the full original path
+    const path = event.path.replace('/api', '');
+    console.log('Received path:', event.path, 'Parsed path:', path);
     
     // Agents status endpoint
     if (event.httpMethod === 'GET' && path === '/agents/status') {
