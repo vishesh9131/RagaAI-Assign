@@ -115,7 +115,7 @@ python main.py > logs/main_api.log 2>&1 &
 MAIN_API_PID=$!
 echo $MAIN_API_PID > logs/main_api.pid
 print_success "Main API server started (PID: $MAIN_API_PID)"
-
+    
 # Wait for Main API to be ready
 if wait_for_service "http://localhost:8000/docs" "Main API"; then
     print_success "✅ Main API is ready and responding"

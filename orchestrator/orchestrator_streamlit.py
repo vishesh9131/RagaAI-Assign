@@ -1,14 +1,4 @@
 import streamlit as st
-
-# Configure page FIRST - this must be the very first Streamlit command
-st.set_page_config(
-    layout="wide", 
-    page_title="🚀 AI Financial Assistant", 
-    page_icon="🤖",
-    initial_sidebar_state="expanded"
-)
-
-# Now import other libraries
 import requests
 import base64
 import time
@@ -27,33 +17,23 @@ import re
 import subprocess
 import os
 
-# Try to import the new direct-callable functions from orchestrator_fastapi
+# Attempt to import the audio recorder component
 try:
-    from orchestrator.orchestrator_fastapi import (
-        initialize_agents as fastapi_initialize_agents,
-        get_agent_status as fastapi_get_agent_status,
-        process_intelligent_query_sync as fastapi_process_intelligent_query_sync,
-    )
-    ORCHESTRATOR_INTEGRATED = True
-except ImportError as e:
-    st.error(f"Failed to import orchestrator functions: {e}. App may not function correctly.")
-    ORCHESTRATOR_INTEGRATED = False
-    # Define dummy functions if import fails, so the app doesn't crash immediately
-    def fastapi_initialize_agents(): 
-        return {}
-    def fastapi_get_agent_status(): 
-        return {"available_agents": [], "language_model": "N/A", "orchestrator_version": "N/A"}
-    def fastapi_process_intelligent_query_sync(query, voice_mode=False, include_debug=False):
-        return {"response_text": "Error: Orchestrator not integrated.", "agents_used": [], "query_interpretation": query, "confidence": 0, "session_id": "error"}
-
-# Configure MISTRAL_API_KEY for integrated language agent
-if "MISTRAL_API_KEY" not in os.environ and ORCHESTRATOR_INTEGRATED:
-    if "MISTRAL_API_KEY" in st.secrets:
-        os.environ["MISTRAL_API_KEY"] = st.secrets["MISTRAL_API_KEY"]
+    # Use native Streamlit audio input instead of st_audiorec
+    AUDIO_RECORDER_AVAILABLE = True
+except ImportError:
+    AUDIO_RECORDER_AVAILABLE = False
 
 # Configuration
 ORCHESTRATOR_URL = "http://localhost:8011"
 VOICE_AGENT_URL = "http://localhost:8000"  # Voice Agent API URL
+
+st.set_page_config(
+    layout="wide", 
+    page_title="🚀 AI Financial Assistant", 
+    page_icon="🤖",
+    initial_sidebar_state="expanded"
+)
 
 # Enhanced Custom CSS for modern design with proper chat sizing
 st.markdown("""

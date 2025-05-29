@@ -1,13 +1,7 @@
 import argparse
 from rich.console import Console
 from pathlib import Path
-import sys
-import os
-
-# Add the project root to the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-
-from agents.core.voice_agent import VoiceAgent
+from voice_agent import VoiceAgent
 
 console = Console()
 

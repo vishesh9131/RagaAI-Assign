@@ -1,12 +1,38 @@
 # 🚀 AI Financial Assistant - Multi-Agent System
 
-<img src="./Assets/hero.gif" alt="Architecture Overview" width="1000">
-
 A comprehensive, modular AI-powered financial assistant featuring multiple specialized agents for market data analysis, web scraping, natural language processing, and voice interaction.
 
 ## 🏗️ Architecture Overview
 
-![Architecture Overview](./Assets/dig1.png)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    AI Financial Assistant                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │  Streamlit App  │  │   Orchestrator  │  │ Data Ingestion  │ │
+│  │                 │  │                 │  │                 │ │
+│  │ • UI Components │  │ • Agent Coord.  │  │ • API Endpoints │ │
+│  │ • Dashboards    │  │ • FAISS Store   │  │ • CLI Interface │ │
+│  │ • Visualizations│  │ • Workflow Mgmt │  │ • Batch Process │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│           │                     │                     │         │
+│           └─────────────────────┼─────────────────────┘         │
+│                                 │                               │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │                      Agents Layer                           │ │
+│  │                                                             │ │
+│  │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────┐ │ │
+│  │ │   Market    │ │  Scraping   │ │  Retriever  │ │Language │ │ │
+│  │ │    Agent    │ │    Agent    │ │    Agent    │ │  Agent  │ │ │
+│  │ └─────────────┘ └─────────────┘ └─────────────┘ └─────────┘ │ │
+│  │ ┌─────────────┐ ┌─────────────┐                             │ │
+│  │ │  Analysis   │ │    Voice    │                             │ │
+│  │ │    Agent    │ │    Agent    │                             │ │
+│  │ └─────────────┘ └─────────────┘                             │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## 📁 Project Structure
 
@@ -130,7 +156,7 @@ RagaAI-Assign/
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/vishesh9131/RagaAI-Assign.git
+git clone <repository-url>
 cd RagaAI-Assign
 ```
 
@@ -340,7 +366,17 @@ docker-compose down
 - **CPU**: 2-4 cores recommended
 - **Storage**: ~1GB (application) + variable (FAISS indices)
 
+## 🤝 Contributing
 
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests and documentation
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🆘 Support
 
@@ -349,3 +385,11 @@ docker-compose down
 - **Health Check**: Run `python health_checker.py`
 - **Logs**: Check `logs/` directory for debugging
 
+## 🔮 Roadmap
+
+- [ ] Real-time market data streaming
+- [ ] Advanced portfolio optimization
+- [ ] Multi-language voice support
+- [ ] Custom model fine-tuning
+- [ ] Kubernetes deployment
+- [ ] Advanced analytics dashboard 

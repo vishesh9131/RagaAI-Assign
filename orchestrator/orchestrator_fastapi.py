@@ -27,22 +27,13 @@ os.environ.setdefault("MISTRAL_API_KEY", "NxdIH9V8xm8eldEGZrKvC1M1ziS1jHal")
 # Global status tracking for real-time updates
 execution_status_store = {}
 
-# Store initialized agents globally to be accessed by Streamlit after initialization
-_initialized_agents = {}
-
-def initialize_agents():
-    """Initializes all agents and stores them in a global dictionary."""
-    global _initialized_agents
-    if not _initialized_agents: # Initialize only once
-        _initialized_agents = {
-            "voice_agent": VoiceAgent(),
-            "retriever_agent": RetrieverAgent(index_path="orchestrator_faiss"),
-            "analysis_agent": AnalysisAgent(),
-            "language_agent": LanguageAgent(model_name="open-mistral-nemo", api_key=os.environ.get("MISTRAL_API_KEY")),
-            "market_agent": MarketDataAgent(),
-            "scraping_agent": ScrapingAgent()
-        }
-    return _initialized_agents
+# Initialize all agents
+voice_agent = VoiceAgent()
+retriever_agent = RetrieverAgent(index_path="orchestrator_faiss")
+analysis_agent = AnalysisAgent()
+language_agent = LanguageAgent(model_name="open-mistral-nemo", api_key="NxdIH9V8xm8eldEGZrKvC1M1ziS1jHal")
+market_agent = MarketDataAgent()
+scraping_agent = ScrapingAgent()
 
 # -------------------------------  MODELS  -------------------------------
 class IntelligentQueryRequest(BaseModel):
@@ -504,166 +495,163 @@ async def execute_explanation_agent(query: str, interpretation: str, session_id:
 
 # -------------------------------  MAIN ORCHESTRATOR  -------------------------------
 async def process_intelligent_query(query: str, voice_mode: bool = False, include_debug: bool = False) -> IntelligentResponse:
-    """Process intelligent query by routing to appropriate agents."""
+    """Process an intelligent query using multiple agents and natural language understanding."""
+    
+    # Create execution session
     session_id = create_execution_session(query)
     
-    # Ensure agents are initialized
-    agents = _initialized_agents if _initialized_agents else initialize_agents()
-    language_agent_instance = agents["language_agent"]
-    voice_agent_instance = agents["voice_agent"]
-    retriever_agent_instance = agents["retriever_agent"]
-    analysis_agent_instance = agents["analysis_agent"]
-    market_agent_instance = agents["market_agent"]
-    scraping_agent_instance = agents["scraping_agent"]
-
-    update_execution_status(session_id, "Initializing", "initializing", 5.0)
-    
-    # Generate a more human-readable query interpretation
     try:
-        interpretation_prompt = (
-            f"Analyze the following user query: '{query}'. "
-            "Provide a concise, one-sentence interpretation of what the user is asking. "
-            "Focus on the core intent and key entities. For example, if the query is "
-            "'What's the current stock price of Apple and tell me news about Tesla?', "
-            "the interpretation could be 'The user wants the current stock price for AAPL and recent news about TSLA.' "
-            "If the query is complex, break it down slightly, like 'User wants to compare financial performance of MSFT and GOOGL, and retrieve recent news about NVDA.'"
-        )
-        interpretation_response = await language_agent_instance.generate_response_async(interpretation_prompt, max_tokens=100)
-        query_interpretation = interpretation_response.strip()
-        confidence = 0.9 # Default confidence, can be refined
-    except Exception as e:
-        print(f"Error generating query interpretation: {e}")
-        query_interpretation = f"Interpreted query: {query}" # Fallback
-        confidence = 0.6
-    
-    update_execution_status(session_id, "Query Interpretation", "routing", 10.0)
-    
-    # Use QueryRouter to determine agents
-    # Ensure the query_router is initialized if it's not part of the class structure that's auto-initialized
-    # For now, assuming query_router is available globally as initialized in the original file
-    selected_agent_types = query_router.classify_query(query_interpretation) 
-    
-    update_execution_status(session_id, f"Identified Agents: {', '.join(selected_agent_types)}", "routing", 20.0)
-
-    all_agent_results = []
-    final_response_parts = []
-    
-    agent_execution_map = {
-        "market_data": (execute_market_agent, market_agent_instance),
-        "analysis": (execute_analysis_agent, analysis_agent_instance),
-        "scraping": (execute_scraping_agent, scraping_agent_instance),
-        "retrieval": (execute_retrieval_agent, retriever_agent_instance),
-        "explanation": (execute_explanation_agent, language_agent_instance) # Explanation uses language agent
-    }
-    
-    for agent_type in selected_agent_types:
+        # Step 1: Interpret the query using language agent
+        update_execution_status(session_id, "Interpreting query", "routing", 10.0)
+        
+        interpretation_prompt = f"""
+        Analyze this financial/business query and provide a brief interpretation of what the user is asking for:
+        Query: "{query}"
+        
+        Interpretation:"""
+        
         try:
-            execute_func, agent_instance = agent_execution_map[agent_type]
-            agent_status = AgentExecutionStatus(
-                agent_name=agent_type.title() + " Agent",
-                status="executing",
-                description="Processing query",
-                start_time=datetime.now()
+            query_interpretation = language_agent.explain(interpretation_prompt, target_audience="system")
+        except Exception as e:
+            print(f"DEBUG: Language agent failed: {e}")
+            query_interpretation = f"Query interpretation failed: {e}"
+        
+        # Step 2: Route to appropriate agents
+        update_execution_status(session_id, "Routing to agents", "routing", 20.0)
+        agent_types = query_router.classify_query(query)
+        
+        # Initialize agent statuses as "waiting"
+        for agent_type in agent_types:
+            agent_name_map = {
+                "market_data": "Market Agent",
+                "analysis": "Analysis Agent", 
+                "scraping": "Scraping Agent",
+                "retrieval": "Retriever Agent",
+                "explanation": "Language Agent"
+            }
+            waiting_status = AgentExecutionStatus(
+                agent_name=agent_name_map.get(agent_type, f"{agent_type.title()} Agent"),
+                status="waiting",
+                description="Waiting for execution"
             )
-            update_agent_status(session_id, agent_status)
-
-            result = await execute_func(query_interpretation, query_interpretation, session_id)
-            agent_result_content = result.result
-            agent_status.description = f"Agent {agent_type} completed processing."
-            agent_status.status = "completed"
-            agent_status.result = agent_result_content
-            agent_status.end_time = datetime.now()
-            update_agent_status(session_id, agent_status)
-
-            all_agent_results.append(agent_status)
-            # Accumulate textual results for final synthesis
-            if isinstance(agent_result_content, dict) and "summary" in agent_result_content:
-                 final_response_parts.append(str(agent_result_content["summary"]))
-            elif isinstance(agent_result_content, dict) and "content" in agent_result_content:
-                 final_response_parts.append(str(agent_result_content["content"]))
-            elif isinstance(agent_result_content, str):
-                final_response_parts.append(agent_result_content)
-            else: # Fallback for other types of results
-                final_response_parts.append(json.dumps(convert_numpy_types(agent_result_content), indent=2))
-
+            update_agent_status(session_id, waiting_status)
+        
+        agents_used = []
+        all_results = {}
+        total_agents = len(agent_types)
+        
+        # Step 3: Execute agents sequentially with progress updates
+        update_execution_status(session_id, "Executing agents", "executing", 30.0)
+        
+        print(f"DEBUG: About to execute {len(agent_types)} agents: {agent_types}")  # Debug print
+        
+        for i, agent_type in enumerate(agent_types):
+            progress = 30.0 + ((i + 1) / total_agents) * 50.0  # 30-80% for agent execution
+            
+            print(f"DEBUG: Executing agent {i+1}/{total_agents}: {agent_type}")  # Debug print
+            
+            if agent_type == "market_data":
+                update_execution_status(session_id, "Executing Market Agent", "executing", progress)
+                result = await execute_market_agent(query, query_interpretation, session_id)
+                agents_used.append(result)
+                print(f"DEBUG: Market agent result: {result.status}")  # Debug print
+                if result.result:
+                    all_results["market_data"] = result.result
+                    
+            elif agent_type == "analysis":
+                update_execution_status(session_id, "Executing Analysis Agent", "executing", progress)
+                result = await execute_analysis_agent(query, query_interpretation, session_id)
+                agents_used.append(result)
+                print(f"DEBUG: Analysis agent result: {result.status}")  # Debug print
+                if result.result:
+                    all_results["analysis"] = result.result
+                    
+            elif agent_type == "scraping":
+                update_execution_status(session_id, "Executing Scraping Agent", "executing", progress)
+                result = await execute_scraping_agent(query, query_interpretation, session_id)
+                agents_used.append(result)
+                print(f"DEBUG: Scraping agent result: {result.status}")  # Debug print
+                if result.result:
+                    all_results["scraping"] = result.result
+                    
+            elif agent_type == "retrieval":
+                update_execution_status(session_id, "Executing Retriever Agent", "executing", progress)
+                result = await execute_retrieval_agent(query, query_interpretation, session_id)
+                agents_used.append(result)
+                print(f"DEBUG: Retrieval agent result: {result.status}")  # Debug print
+                if result.result:
+                    all_results["retrieval"] = result.result
+                    
+            elif agent_type == "explanation":
+                update_execution_status(session_id, "Executing Language Agent", "executing", progress)
+                result = await execute_explanation_agent(query, query_interpretation, session_id)
+                agents_used.append(result)
+                print(f"DEBUG: Explanation agent result: {result.status}")  # Debug print
+                if result.result:
+                    all_results["explanation"] = result.result
+        
+        print(f"DEBUG: Final agents_used length: {len(agents_used)}")  # Debug print
+        
+        # Step 4: Generate natural language response
+        update_execution_status(session_id, "Generating response", "executing", 85.0)
+        
+        response_prompt = f"""
+        User Query: "{query}"
+        
+        Available Data:
+        {json.dumps(all_results, indent=2, default=str)[:2000]}...
+        
+        Create a clear, helpful response that answers the user's question using the available data. 
+        Be conversational and explain the findings in simple terms.
+        
+        Response:"""
+        
+        try:
+            if all_results:
+                natural_response = language_agent.summarize(response_prompt, max_words=200)
+            else:
+                natural_response = language_agent.explain(query, target_audience="general")
         except Exception as e:
-            print(f"Error executing agent {agent_type}: {e}")
-            agent_status.status = "failed"
-            agent_status.error = str(e)
-            agent_status.end_time = datetime.now()
-            update_agent_status(session_id, agent_status)
-            all_agent_results.append(agent_status)
-            final_response_parts.append(f"Error with {agent_type}: {e}")
-
-    update_execution_status(session_id, "Synthesizing Response", "executing", 80.0)
-    
-    # Synthesize final response
-    if not final_response_parts:
-        final_summary = "I could not find specific information for your query. Please try rephrasing or be more specific."
-    elif len(final_response_parts) == 1:
-        final_summary = final_response_parts[0]
-    else:
-        synthesis_prompt = (
-            f"The user asked: '{query_interpretation}'. Multiple AI agents have processed this query. "
-            "Their findings are summarized below. Your task is to synthesize these findings into a single, coherent, "
-            "and easy-to-understand response for the user. Ensure the response directly addresses the user's original query. "
-            "Present the information clearly. If there are multiple pieces of information, structure them logically. "
-            "Do not just list the findings; integrate them. Here are the findings:\\n\\n"
-            + "\\n\\n---\\n\\n".join(final_response_parts)
-            + "\\n\\nSynthesized Response:"
+            print(f"DEBUG: Response generation failed: {e}")
+            if all_results:
+                natural_response = f"I found some data but couldn't generate a proper response: {str(all_results)[:200]}..."
+            else:
+                natural_response = f"I couldn't process your query properly. Error: {e}"
+        
+        # Step 5: Calculate confidence
+        confidence = 0.9 if len([a for a in agents_used if a.status == "completed"]) > 0 else 0.3
+        
+        # Step 6: Generate audio if requested
+        update_execution_status(session_id, "Finalizing response", "executing", 95.0)
+        wav_b64 = None
+        if voice_mode:
+            print(f"DEBUG: Voice mode enabled, attempting TTS for text: '{natural_response[:50]}...'")
+            try:
+                wav_path = voice_agent.text_to_speech(natural_response)
+                print(f"DEBUG: TTS created file at: {wav_path}")
+                with open(wav_path, "rb") as f:
+                    wav_b64 = base64.b64encode(f.read()).decode()
+                print(f"DEBUG: Successfully encoded audio to base64, length: {len(wav_b64) if wav_b64 else 0}")
+            except Exception as e:
+                print(f"DEBUG: TTS failed with error: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # Mark as completed
+        update_execution_status(session_id, "Completed", "completed", 100.0)
+        
+        return IntelligentResponse(
+            response_text=natural_response,
+            agents_used=agents_used,
+            query_interpretation=query_interpretation,
+            wav_audio_base64=wav_b64,
+            confidence=confidence,
+            session_id=session_id
         )
-        try:
-            final_summary = await language_agent_instance.generate_response_async(synthesis_prompt, max_tokens=1024)
-        except Exception as e:
-            print(f"Error during final synthesis: {e}")
-            final_summary = "I gathered some information, but had trouble putting it all together. Here are the raw findings:\\n" + "\\n".join(final_response_parts)
-
-    update_execution_status(session_id, "Finalizing", "completed", 90.0)
-
-    wav_audio_base64 = None
-    if voice_mode:
-        try:
-            # Use the main voice agent for TTS
-            temp_audio_path = voice_agent_instance.text_to_speech(final_summary, output_filename="orchestrator_tts_output.wav")
-            if temp_audio_path and os.path.exists(temp_audio_path):
-                with open(temp_audio_path, "rb") as wav_file:
-                    wav_audio_base64 = base64.b64encode(wav_file.read()).decode()
-                os.remove(temp_audio_path) # Clean up temp file
-            update_execution_status(session_id, "Generated Voice Output", "completed", 95.0)
-        except Exception as e:
-            print(f"Error generating TTS: {e}")
-            # Proceed without audio if TTS fails
-
-    final_response = IntelligentResponse(
-        response_text=final_summary.strip(),
-        agents_used=all_agent_results,
-        query_interpretation=query_interpretation,
-        wav_audio_base64=wav_audio_base64,
-        confidence=confidence,
-        session_id=session_id
-    )
-    update_execution_status(session_id, "Response Ready", "completed", 100.0)
-    return final_response
-
-def process_intelligent_query_sync(query: str, voice_mode: bool = False, include_debug: bool = False) -> IntelligentResponse:
-    """Synchronous wrapper for process_intelligent_query.
-    This is what Streamlit will call if it cannot easily manage async calls.
-    """
-    import asyncio
-    try:
-        # Check if there's an existing event loop
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If a loop is running, create a new task
-            # This might be an issue in some environments like Streamlit that manage their own loop.
-            # For simplicity, we'll try to run it in a new loop if possible, or directly if not.
-            # A more robust solution might involve `nest_asyncio` or a dedicated thread for the async loop.
-            return asyncio.run(process_intelligent_query(query, voice_mode, include_debug))
-        else:
-            return loop.run_until_complete(process_intelligent_query(query, voice_mode, include_debug))
-    except RuntimeError as e: # Handles "no event loop" or "event loop is closed"
-        # If no loop or loop is closed, create a new one
-        return asyncio.run(process_intelligent_query(query, voice_mode, include_debug))
+    
+    except Exception as e:
+        update_execution_status(session_id, f"Failed: {str(e)}", "failed", 0.0)
+        raise e
 
 # -------------------------------  ROUTES  -------------------------------
 @app.post("/intelligent/query", response_model=IntelligentResponse, summary="Intelligent Query Processing")
@@ -718,58 +706,21 @@ async def cleanup_execution_status(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
 
 @app.get("/agents/status", summary="Get Agent Status")
-async def get_agent_status_endpoint(): # Renamed to avoid conflict with the direct-callable function
-    """
-    Provides the current status and configuration of all available agents. (API Endpoint)
-    """
-    agents = _initialized_agents if _initialized_agents else initialize_agents() # Ensure agents are initialized
-
+async def get_agent_status():
+    """Get the current status of all available agents."""
     return {
-        "orchestrator_version": app.version,
-        "language_model": agents["language_agent"].model_name,
         "available_agents": [
-            {"name": "Voice Agent", "status": "active" if agents.get("voice_agent") else "inactive", "details": agents["voice_agent"].get_status() if agents.get("voice_agent") else {}},
-            {"name": "Retriever Agent", "status": "active" if agents.get("retriever_agent") else "inactive", "details": agents["retriever_agent"].get_status() if agents.get("retriever_agent") else {}},
-            {"name": "Analysis Agent", "status": "active" if agents.get("analysis_agent") else "inactive", "details": agents["analysis_agent"].get_status() if agents.get("analysis_agent") else {}},
-            {"name": "Language Agent", "status": "active" if agents.get("language_agent") else "inactive", "details": agents["language_agent"].get_status() if agents.get("language_agent") else {}},
-            {"name": "Market Agent", "status": "active" if agents.get("market_agent") else "inactive", "details": agents["market_agent"].get_status() if agents.get("market_agent") else {}},
-            {"name": "Scraping Agent", "status": "active" if agents.get("scraping_agent") else "inactive", "details": agents["scraping_agent"].get_status() if agents.get("scraping_agent") else {}}
-        ]
+            {"name": "Market Agent", "description": "Stock prices, company info, earnings data", "status": "active"},
+            {"name": "Analysis Agent", "description": "Portfolio analysis, sentiment analysis, market trends", "status": "active"},
+            {"name": "Language Agent", "description": "Text summarization and explanation powered by Mistral AI", "status": "active"},
+            {"name": "Retriever Agent", "description": "Document search and retrieval", "status": "active"},
+            {"name": "Scraping Agent", "description": "Web content extraction", "status": "active"},
+            {"name": "Voice Agent", "description": "Speech-to-text and text-to-speech", "status": "active"}
+        ],
+        "orchestrator_version": "2.0.0",
+        "language_model": "Mistral AI open-mistral-nemo",
+        "active_sessions": len(execution_status_store)
     }
-
-def get_agent_status(): # Direct-callable function for Streamlit
-    """
-    Provides the current status and configuration of all available agents. (Direct Call)
-    """
-    agents = _initialized_agents if _initialized_agents else initialize_agents() # Ensure agents are initialized
-    # Ensure MISTRAL_API_KEY is available for LanguageAgent
-    if "MISTRAL_API_KEY" not in os.environ:
-        # Attempt to get it from streamlit secrets if available, otherwise raise error or use a default
-        # This part depends on how Streamlit secrets are structured and if they are available here.
-        # For now, we assume it's set as an environment variable.
-        # A more robust solution would be to pass config explicitly or use a shared config module.
-        print("Warning: MISTRAL_API_KEY not found in environment. Language agent might fail.")
-
-
-    language_agent_instance = agents.get("language_agent")
-    
-    return {
-        "orchestrator_version": "2.0.0", # app.version might not be available if FastAPI app is not fully run
-        "language_model": language_agent_instance.model_name if language_agent_instance else "N/A",
-        "available_agents": [
-            {"name": "Voice Agent", "status": "active" if agents.get("voice_agent") else "inactive", "details": agents["voice_agent"].get_status() if agents.get("voice_agent") else {}},
-            {"name": "Retriever Agent", "status": "active" if agents.get("retriever_agent") else "inactive", "details": agents["retriever_agent"].get_status() if agents.get("retriever_agent") else {}},
-            {"name": "Analysis Agent", "status": "active" if agents.get("analysis_agent") else "inactive", "details": agents["analysis_agent"].get_status() if agents.get("analysis_agent") else {}},
-            {"name": "Language Agent", "status": "active" if language_agent_instance else "inactive", "details": language_agent_instance.get_status() if language_agent_instance else {}},
-            {"name": "Market Agent", "status": "active" if agents.get("market_agent") else "inactive", "details": agents["market_agent"].get_status() if agents.get("market_agent") else {}},
-            {"name": "Scraping Agent", "status": "active" if agents.get("scraping_agent") else "inactive", "details": agents["scraping_agent"].get_status() if agents.get("scraping_agent") else {}}
-        ]
-    }
-
-# Ensure agents are initialized when the FastAPI app starts (for API endpoints)
-@app.on_event("startup")
-async def startup_event():
-    initialize_agents()
 
 def convert_numpy_types(obj):
     """Convert numpy types to Python native types for JSON serialization."""

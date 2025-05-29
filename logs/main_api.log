@@ -3,7 +3,7 @@
 Device set to use mps:0
 /Users/visheshyadav/Documents/GitHub/RagaAI-Assign/main.py:382: DeprecationWarning: `example` has been deprecated, please use `examples` instead
   async def compare_stock_prices_api(ticker: str = Query(..., example="AAPL", description="Stock ticker symbol.")):
-INFO:     Started server process [8532]
+INFO:     Started server process [21036]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
@@ -14,11 +14,5 @@ No existing FAISS index found. A new one will be created upon adding documents.
 [LanguageAgent] Initializing local fallback model...
 [LanguageAgent] Local DistilBART model loaded successfully.
 [LanguageAgent] Successfully initialized Mistral AI client.
-INFO:     127.0.0.1:63112 - "GET /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63168 - "GET /docs HTTP/1.1" 200 OK
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [8532]
-/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
-  warnings.warn('resource_tracker: There appear to be %d '
+INFO:     127.0.0.1:50248 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50463 - "GET /docs HTTP/1.1" 200 OK
