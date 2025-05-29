@@ -3,7 +3,7 @@ rich>=13.0.0
 pathlib
 
 # Speech-to-Text (STT)
-openai-whisper==20231117
+# openai-whisper==20231117
 # Alternative: faster-whisper (uncomment if preferred)
 # faster-whisper
 
