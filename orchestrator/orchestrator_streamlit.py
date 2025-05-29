@@ -52,7 +52,7 @@ if 'portfolio_data' not in st.session_state:
 
 # Header
 st.title("🎯 Multi-Agent Finance Assistant")
-st.subtitle("Morning Market Brief System - Assignment Demo")
+st.subheader("Morning Market Brief System - Assignment Demo")
 
 # Sidebar - Agent Architecture
 with st.sidebar:
