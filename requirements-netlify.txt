@@ -1,10 +1,4 @@
-# Lightweight requirements for Netlify serverless deployment
-requests>=2.31.0
-python-dotenv>=1.0.0
-
-# Core dependencies for basic functionality
-mistralai>=0.0.8
-
-# Optional: Add if you need more functionality
-# pandas>=2.0.0
-# numpy>=1.24.0 
+# Minimal requirements for Netlify deployment
+requests
+python-dotenv
+mistralai 
