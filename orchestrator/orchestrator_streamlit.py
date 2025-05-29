@@ -1,4 +1,14 @@
 import streamlit as st
+
+# Configure page FIRST - this must be the very first Streamlit command
+st.set_page_config(
+    layout="wide", 
+    page_title="🚀 AI Financial Assistant", 
+    page_icon="🤖",
+    initial_sidebar_state="expanded"
+)
+
+# Now import other libraries
 import requests
 import base64
 import time
@@ -23,40 +33,27 @@ try:
         initialize_agents as fastapi_initialize_agents,
         get_agent_status as fastapi_get_agent_status,
         process_intelligent_query_sync as fastapi_process_intelligent_query_sync,
-        # Add other necessary functions or models if they are to be called directly
-        # For example, if Pydantic models like IntelligentResponse are used in Streamlit type hints:
-        # IntelligentResponse as FastAPIIntelligentResponse 
     )
     ORCHESTRATOR_INTEGRATED = True
 except ImportError as e:
     st.error(f"Failed to import orchestrator functions: {e}. App may not function correctly.")
     ORCHESTRATOR_INTEGRATED = False
     # Define dummy functions if import fails, so the app doesn't crash immediately
-    def fastapi_initialize_agents(): return {}
-    def fastapi_get_agent_status(): return {"available_agents": [], "language_model": "N/A", "orchestrator_version": "N/A"}
+    def fastapi_initialize_agents(): 
+        return {}
+    def fastapi_get_agent_status(): 
+        return {"available_agents": [], "language_model": "N/A", "orchestrator_version": "N/A"}
     def fastapi_process_intelligent_query_sync(query, voice_mode=False, include_debug=False):
         return {"response_text": "Error: Orchestrator not integrated.", "agents_used": [], "query_interpretation": query, "confidence": 0, "session_id": "error"}
 
-# Configuration
-# ORCHESTRATOR_URL = "http://localhost:8011" # No longer primary, but can be kept as a fallback or for other services
-# VOICE_AGENT_URL = "http://localhost:8000"  # Voice Agent API URL - this might still be needed if voice agent is separate
-
 # Configure MISTRAL_API_KEY for integrated language agent
-# This should be set as an environment variable or Streamlit secret
 if "MISTRAL_API_KEY" not in os.environ and ORCHESTRATOR_INTEGRATED:
     if "MISTRAL_API_KEY" in st.secrets:
         os.environ["MISTRAL_API_KEY"] = st.secrets["MISTRAL_API_KEY"]
-    else:
-        # st.warning("MISTRAL_API_KEY not found in environment variables or Streamlit secrets. Language agent may not work.")
-        # Fallback or raise error - for now, the fastapi module has a default key which might be used or fail.
-        pass
 
-st.set_page_config(
-    layout="wide", 
-    page_title="🚀 AI Financial Assistant", 
-    page_icon="🤖",
-    initial_sidebar_state="expanded"
-)
+# Configuration
+ORCHESTRATOR_URL = "http://localhost:8011"
+VOICE_AGENT_URL = "http://localhost:8000"  # Voice Agent API URL
 
 # Enhanced Custom CSS for modern design with proper chat sizing
 st.markdown("""
