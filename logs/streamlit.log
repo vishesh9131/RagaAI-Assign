@@ -11,3 +11,6 @@
             
 2025-05-29 18:16:30.414 Thread 'Thread-3 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
 2025-05-29 18:16:30.416 Thread 'Thread-3 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-05-29 18:20:54.199 Thread 'Thread-6 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-05-29 18:20:54.200 Thread 'Thread-6 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-05-29 18:20:54.618 MediaFileHandler: Missing file 8f37c9d7ac7dfa7d417fcf92a55e5e8941009d0d2d0d86d9d369b21c.wav

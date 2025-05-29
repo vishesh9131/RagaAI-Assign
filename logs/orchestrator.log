@@ -39,3 +39,20 @@ DEBUG: TTS created file at: /private/var/folders/yf/20z1hn994jd04q4kl0gpgh740000
 DEBUG: Successfully encoded audio to base64, length: 1116704
 INFO:     127.0.0.1:63200 - "POST /intelligent/query HTTP/1.1" 200 OK
 INFO:     127.0.0.1:63211 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63370 - "GET /agents/status HTTP/1.1" 200 OK
+/Users/visheshyadav/test/market_env/lib/python3.11/site-packages/whisper/transcribe.py:126: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+DEBUG: Query 'How many growth and video stocks has gained as compared to Apple stocks?' scored agents: {'market_data': 2, 'analysis': 4, 'explanation': 1, 'retrieval': 1}
+DEBUG: Selected agents: ['analysis', 'market_data']
+DEBUG: About to execute 2 agents: ['analysis', 'market_data']
+DEBUG: Executing agent 1/2: analysis
+DEBUG: Analysis agent result: completed
+DEBUG: Executing agent 2/2: market_data
+DEBUG: Market agent result: completed
+DEBUG: Final agents_used length: 2
+DEBUG: Voice mode enabled, attempting TTS for text: 'Based on the provided data, Apple Inc. (AAPL) has ...'
+[VoiceAgent] Using macOS 'say' command for TTS.
+DEBUG: TTS created file at: /private/var/folders/yf/20z1hn994jd04q4kl0gpgh740000gn/T/voice_agent_output.wav
+DEBUG: Successfully encoded audio to base64, length: 2864168
+INFO:     127.0.0.1:63374 - "POST /intelligent/voice HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63390 - "GET /agents/status HTTP/1.1" 200 OK
