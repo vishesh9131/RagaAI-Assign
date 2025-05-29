@@ -34,7 +34,9 @@ try:
         get_agent_status as fastapi_get_agent_status,
         process_intelligent_query_sync as fastapi_process_intelligent_query_sync,
     )
-    ORCHESTRATOR_INTEGRATED = True
+    # Force HTTP requests when in production mode (using deployed API)
+    deployment_mode = os.environ.get("DEPLOYMENT_MODE", "local")
+    ORCHESTRATOR_INTEGRATED = deployment_mode != "production"
 except ImportError as e:
     st.error(f"Failed to import orchestrator functions: {e}. App may not function correctly.")
     ORCHESTRATOR_INTEGRATED = False
@@ -51,9 +53,16 @@ if "MISTRAL_API_KEY" not in os.environ and ORCHESTRATOR_INTEGRATED:
     if "MISTRAL_API_KEY" in st.secrets:
         os.environ["MISTRAL_API_KEY"] = st.secrets["MISTRAL_API_KEY"]
 
-# Configuration
-ORCHESTRATOR_URL = "http://localhost:8011"
+# Configuration - Use environment variables or secrets, fallback to deployed API
+ORCHESTRATOR_URL = os.environ.get("ORCHESTRATOR_URL") or st.secrets.get("ORCHESTRATOR_URL", "https://orch.netlify.app/api")
 VOICE_AGENT_URL = "http://localhost:8000"  # Voice Agent API URL
+
+# Display deployment mode in sidebar
+deployment_mode = os.environ.get("DEPLOYMENT_MODE", "production")
+st.sidebar.info(f"🚀 Mode: {deployment_mode.title()}")
+st.sidebar.info(f"🌐 API: {ORCHESTRATOR_URL}")
+
+# Debug: Show what URL is actually being used
 
 # Enhanced Custom CSS for modern design with proper chat sizing
 st.markdown("""
@@ -578,7 +587,7 @@ def display_enhanced_real_time_status(session_id):
         return
     
     try:
-        response = requests.get(f"{ORCHESTRATOR_URL}/execution/status/{session_id}", timeout=5)
+        response = requests.get(f"{ORCHESTRATOR_URL}/execution/status/{session_id}", timeout=10)
         if response.status_code == 200:
             data = response.json()
             
@@ -952,7 +961,7 @@ def send_intelligent_request(query: str = None, audio_file = None, voice_output_
                     
                     # Collect agent flow data
                     try:
-                        flow_response = requests.get(f"{ORCHESTRATOR_URL}/execution/status/{session_id}", timeout=5)
+                        flow_response = requests.get(f"{ORCHESTRATOR_URL}/execution/status/{session_id}", timeout=10)
                         if flow_response.status_code == 200:
                             flow_data = flow_response.json()
                             agent_flow_data = flow_data.get('agents_status', [])
@@ -1189,7 +1198,7 @@ with st.sidebar:
     
     # Connection status with enhanced styling
     try:
-        status_response = requests.get(f"{ORCHESTRATOR_URL}/agents/status", timeout=3)
+        status_response = requests.get(f"{ORCHESTRATOR_URL}/agents/status", timeout=10)
         if status_response.status_code == 200:
             status_data = status_response.json()
             st.markdown("""
