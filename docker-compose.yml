@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Main API Service
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - MISTRAL_API_KEY=NxdIH9V8xm8eldEGZrKvC1M1ziS1jHal
+      - PYTHONPATH=/app
+    volumes:
+      - ./logs:/app/logs
+      - ./orchestrator/faiss:/app/orchestrator/faiss
+    command: python main.py
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Orchestrator Service
+  orchestrator:
+    build: .
+    ports:
+      - "8011:8011"
+    environment:
+      - MISTRAL_API_KEY=NxdIH9V8xm8eldEGZrKvC1M1ziS1jHal
+      - PYTHONPATH=/app
+    volumes:
+      - ./logs:/app/logs
+      - ./orchestrator/faiss:/app/orchestrator/faiss
+    command: python orchestrator/orchestrator_fastapi.py
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Streamlit Web App
+  streamlit:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - MISTRAL_API_KEY=NxdIH9V8xm8eldEGZrKvC1M1ziS1jHal
+      - PYTHONPATH=/app
+    volumes:
+      - ./logs:/app/logs
+      - ./orchestrator/faiss:/app/orchestrator/faiss
+    command: streamlit run streamlit_app/orchestrator_streamlit.py --server.port=8501 --server.address=0.0.0.0
+    depends_on:
+      - orchestrator
+      - api
+
+volumes:
+  faiss_data:
+  logs_data: 

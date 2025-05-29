@@ -1,0 +1,48 @@
+# Core dependencies
+rich>=13.0.0
+pathlib
+
+# Speech-to-Text (STT)
+openai-whisper>=20231117
+# Alternative: faster-whisper (uncomment if preferred)
+# faster-whisper
+
+# Text-to-Speech (TTS) - Local
+pyttsx3>=2.90
+
+# Text-to-Speech (TTS) - API providers
+openai>=1.0.0  # For OpenAI TTS API
+requests>=2.31.0  # For ElevenLabs API
+google-cloud-texttospeech>=2.16.0  # For Google Cloud TTS API
+
+# Audio playback (choose one or more)
+pygame>=2.5.0  # Cross-platform audio playback (recommended)
+# simpleaudio>=1.0.4  # Alternative audio playback
+numpy>=1.24.0  # Required for pygame audio processing
+
+# macOS specific (if using pyobjc for better pyttsx3 support)
+# pyobjc>=9.0; sys_platform == "darwin"
+
+streamlit
+fastapi
+uvicorn
+# streamlit-audiorec  # Removed - using native st.audio_input instead
+pydub
+requests
+plotly
+pandas
+python-multipart
+yfinance>=0.2.18
+click>=8.1.0
+lxml>=4.9.1
+beautifulsoup4>=4.11.1
+tenacity>=8.2.0
+langchain>=0.1.0
+langchain-community>=0.0.20
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.0
+nltk>=3.8.1
+mistralai>=0.4.0
+transformers>=4.38.0
+torch>=2.1.0
+pyttsx3>=2.90 

@@ -1,0 +1,18 @@
+/Users/visheshyadav/Documents/GitHub/RagaAI-Assign/agents/core/retriever_agent.py:104: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-huggingface package and should be used instead. To use it run `pip install -U :class:`~langchain-huggingface` and import as `from :class:`~langchain_huggingface import HuggingFaceEmbeddings``.
+  self.embeddings = HuggingFaceEmbeddings(model_name=candidate)
+Device set to use mps:0
+/Users/visheshyadav/Documents/GitHub/RagaAI-Assign/main.py:382: DeprecationWarning: `example` has been deprecated, please use `examples` instead
+  async def compare_stock_prices_api(ticker: str = Query(..., example="AAPL", description="Stock ticker symbol.")):
+INFO:     Started server process [98300]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+Initializing embeddings with model: thenlper/gte-small
+[RetrieverAgent] Attempting to load embedding model: thenlper/gte-small
+[RetrieverAgent] Successfully loaded 'thenlper/gte-small'.
+No existing FAISS index found. A new one will be created upon adding documents.
+[LanguageAgent] Initializing local fallback model...
+[LanguageAgent] Local DistilBART model loaded successfully.
+[LanguageAgent] Successfully initialized Mistral AI client.
+INFO:     127.0.0.1:60033 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60086 - "GET /docs HTTP/1.1" 200 OK

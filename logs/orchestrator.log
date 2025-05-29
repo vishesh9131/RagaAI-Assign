@@ -1,0 +1,62 @@
+/Users/visheshyadav/Documents/GitHub/RagaAI-Assign/agents/core/retriever_agent.py:104: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-huggingface package and should be used instead. To use it run `pip install -U :class:`~langchain-huggingface` and import as `from :class:`~langchain_huggingface import HuggingFaceEmbeddings``.
+  self.embeddings = HuggingFaceEmbeddings(model_name=candidate)
+Device set to use mps:0
+INFO:     Started server process [98383]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8011 (Press CTRL+C to quit)
+Initializing embeddings with model: thenlper/gte-small
+[RetrieverAgent] Attempting to load embedding model: thenlper/gte-small
+[RetrieverAgent] Successfully loaded 'thenlper/gte-small'.
+No existing FAISS index found. A new one will be created upon adding documents.
+[LanguageAgent] Initializing local fallback model...
+[LanguageAgent] Local DistilBART model loaded successfully.
+[LanguageAgent] Successfully initialized Mistral AI client.
+INFO:     127.0.0.1:60079 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60084 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60102 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60106 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60108 - "GET /agents/status HTTP/1.1" 200 OK
+/Users/visheshyadav/test/market_env/lib/python3.11/site-packages/whisper/transcribe.py:126: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+/Users/visheshyadav/test/market_env/lib/python3.11/site-packages/pydantic/type_adapter.py:572: UserWarning: Pydantic serializer warnings:
+  PydanticSerializationUnexpectedValue(Expected `dict[str, any]` - serialized value may not be as expected [input_value="The user wants to know a... the current situation.", input_type=str])
+  return self.serializer.to_python(
+DEBUG: Query 'Check and tell me about Nvidia stocks.' scored agents: {'market_data': 1, 'explanation': 1, 'retrieval': 1}
+DEBUG: Selected agents: ['market_data', 'explanation', 'retrieval']
+DEBUG: About to execute 3 agents: ['market_data', 'explanation', 'retrieval']
+DEBUG: Executing agent 1/3: market_data
+DEBUG: Market agent result: completed
+DEBUG: Executing agent 2/3: explanation
+DEBUG: Explanation agent result: completed
+DEBUG: Executing agent 3/3: retrieval
+Vector store not initialized. Add documents first.
+DEBUG: Retrieval agent result: completed
+DEBUG: Final agents_used length: 3
+[LanguageAgent] Mistral API call failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}
+[LanguageAgent] Mistral summarization failed: API error occurred: Status 429
+{"message":"Requests rate limit exceeded"}. Falling back to local model.
+DEBUG: Voice mode enabled, attempting TTS for text: 'Unable to summarize due to API limitations and mis...'
+[VoiceAgent] Using macOS 'say' command for TTS.
+DEBUG: TTS created file at: /private/var/folders/yf/20z1hn994jd04q4kl0gpgh740000gn/T/voice_agent_output.wav
+DEBUG: Successfully encoded audio to base64, length: 543184
+INFO:     127.0.0.1:60110 - "POST /intelligent/voice HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60115 - "GET /agents/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60119 - "GET /agents/status HTTP/1.1" 200 OK
+/Users/visheshyadav/test/market_env/lib/python3.11/site-packages/whisper/transcribe.py:126: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+DEBUG: Query 'Compare Apple stocks with Tata stocks.' scored agents: {'market_data': 2, 'analysis': 3}
+DEBUG: Selected agents: ['analysis', 'market_data']
+DEBUG: About to execute 2 agents: ['analysis', 'market_data']
+DEBUG: Executing agent 1/2: analysis
+DEBUG: Analysis agent result: completed
+DEBUG: Executing agent 2/2: market_data
+DEBUG: Market agent result: completed
+DEBUG: Final agents_used length: 2
+DEBUG: Voice mode enabled, attempting TTS for text: 'As of today, Apple Inc. (AAPL) stocks have shown a...'
+[VoiceAgent] Using macOS 'say' command for TTS.
+DEBUG: TTS created file at: /private/var/folders/yf/20z1hn994jd04q4kl0gpgh740000gn/T/voice_agent_output.wav
+DEBUG: Successfully encoded audio to base64, length: 3260604
+INFO:     127.0.0.1:60121 - "POST /intelligent/voice HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60125 - "GET /agents/status HTTP/1.1" 200 OK
