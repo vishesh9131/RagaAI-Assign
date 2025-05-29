@@ -44,46 +44,72 @@ EMBEDDED_MODE = True  # Force embedded mode for Streamlit Cloud
 def initialize_agents():
     """Initialize all available agents for embedded mode."""
     if not AGENTS_AVAILABLE:
+        print("⚠️  Agents not available - running in basic embedded mode")
         return {}
     
     agents = {}
+    agent_errors = []
     
+    # Language Agent - Most basic, try first
     try:
-        # Initialize Language Agent
-        agents['language'] = LanguageAgent()
-        print("✅ Language Agent initialized")
+        print("Initializing Language Agent...")
+        agents['language'] = LanguageAgent(model_name="open-mistral-nemo", api_key="NxdIH9V8xm8eldEGZrKvC1M1ziS1jHal")
+        print("✅ Language Agent initialized successfully")
     except Exception as e:
-        print(f"❌ Failed to initialize Language Agent: {e}")
+        error_msg = f"❌ Failed to initialize Language Agent: {str(e)}"
+        print(error_msg)
+        agent_errors.append(error_msg)
     
+    # Market Agent - Core functionality for financial data
     try:
-        # Initialize Voice Agent
-        agents['voice'] = VoiceAgent()
-        print("✅ Voice Agent initialized")
-    except Exception as e:
-        print(f"❌ Failed to initialize Voice Agent: {e}")
-    
-    try:
-        # Initialize Retriever Agent
-        agents['retriever'] = RetrieverAgent()
-        print("✅ Retriever Agent initialized")
-    except Exception as e:
-        print(f"❌ Failed to initialize Retriever Agent: {e}")
-    
-    try:
-        # Initialize Market Agent
+        print("Initializing Market Agent...")
         agents['market'] = MarketDataAgent()
-        print("✅ Market Agent initialized")
+        print("✅ Market Agent initialized successfully")
     except Exception as e:
-        print(f"❌ Failed to initialize Market Agent: {e}")
+        error_msg = f"❌ Failed to initialize Market Agent: {str(e)}"
+        print(error_msg)
+        agent_errors.append(error_msg)
     
+    # Analysis Agent - Portfolio analysis
     try:
-        # Initialize Analysis Agent
+        print("Initializing Analysis Agent...")
         agents['analysis'] = AnalysisAgent()
-        print("✅ Analysis Agent initialized")
+        print("✅ Analysis Agent initialized successfully")
     except Exception as e:
-        print(f"❌ Failed to initialize Analysis Agent: {e}")
+        error_msg = f"❌ Failed to initialize Analysis Agent: {str(e)}"
+        print(error_msg)
+        agent_errors.append(error_msg)
     
-    print(f"Initialized {len(agents)} agents successfully")
+    # Retriever Agent - May have heavy dependencies
+    try:
+        print("Initializing Retriever Agent...")
+        agents['retriever'] = RetrieverAgent()
+        print("✅ Retriever Agent initialized successfully")
+    except Exception as e:
+        error_msg = f"❌ Failed to initialize Retriever Agent (this is optional): {str(e)}"
+        print(error_msg)
+        agent_errors.append(error_msg)
+        # Retriever is optional, don't fail completely
+    
+    # Voice Agent - May have platform dependencies
+    try:
+        print("Initializing Voice Agent...")
+        agents['voice'] = VoiceAgent()
+        print("✅ Voice Agent initialized successfully")
+    except Exception as e:
+        error_msg = f"❌ Failed to initialize Voice Agent (this is optional): {str(e)}"
+        print(error_msg)
+        agent_errors.append(error_msg)
+        # Voice is optional, don't fail completely
+    
+    print(f"🤖 Successfully initialized {len(agents)} out of 5 agents")
+    
+    if agent_errors:
+        print("⚠️  Some agents failed to initialize:")
+        for error in agent_errors:
+            print(f"   {error}")
+        print("💡 The app will continue with available agents and fallback processing")
+    
     return agents
 
 class QueryRouter:
@@ -927,7 +953,7 @@ def display_enhanced_conversation():
 
 def speak_response(text: str, provider: str = "macos_say", voice: str = None):
     """
-    Speak the given text using the Voice CLI directly.
+    Speak the given text using various TTS providers.
     
     Args:
         text: Text to speak
@@ -945,42 +971,86 @@ def speak_response(text: str, provider: str = "macos_say", voice: str = None):
         clean_text = ' '.join(clean_text.split())  # Clean up extra spaces
         
         # Limit text length for reasonable speech duration
-        if len(clean_text) > 500:
-            clean_text = clean_text[:500] + "..."
+        if len(clean_text) > 300:
+            clean_text = clean_text[:300] + "..."
         
-        # Build the voice CLI command
-        cmd = ['python', 'data_ingestion/cli/voice_cli.py']
+        # Try different TTS approaches based on provider
+        if provider == "macos_say":
+            # Use macOS built-in say command directly
+            cmd = ['say']
+            if voice and voice != "Default":
+                cmd.extend(['-v', voice])
+            cmd.append(clean_text)
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            
+            if result.returncode == 0:
+                print(f"🔊 Voice output completed using macOS say")
+                return True
+            else:
+                print(f"❌ macOS say failed: {result.stderr}")
+                # Fall back to alternative method
+                return _fallback_voice_output(clean_text)
         
-        # Add provider and voice options
-        if provider:
-            cmd.extend(['--tts-provider', provider])
-        if voice:
-            cmd.extend(['--tts-voice', voice])
-        
-        # Add speak command and text
-        cmd.extend(['speak', clean_text])
-        
-        # Execute the command
-        result = subprocess.run(
-            cmd,
-            cwd=os.getcwd(),
-            capture_output=True,
-            text=True,
-            timeout=30  # 30 second timeout
-        )
-        
-        if result.returncode == 0:
-            print(f"🔊 Voice output completed using {provider}")
-            return True
         else:
-            print(f"❌ Voice output failed: {result.stderr}")
-            return False
+            # For other providers, try the voice CLI approach
+            cmd = ['python', 'data_ingestion/cli/voice_cli.py']
+            
+            # Add provider and voice options
+            if provider:
+                cmd.extend(['--tts-provider', provider])
+            if voice:
+                cmd.extend(['--tts-voice', voice])
+            
+            # Add speak command and text
+            cmd.extend(['speak', clean_text])
+            
+            # Execute the command
+            result = subprocess.run(
+                cmd,
+                cwd=os.getcwd(),
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                print(f"🔊 Voice output completed using {provider}")
+                return True
+            else:
+                print(f"❌ Voice CLI failed: {result.stderr}")
+                # Fall back to macOS say if available
+                return _fallback_voice_output(clean_text)
             
     except subprocess.TimeoutExpired:
         print("❌ Voice output timed out")
         return False
     except Exception as e:
         print(f"❌ Voice output error: {e}")
+        return False
+
+def _fallback_voice_output(text: str):
+    """Fallback voice output using system commands."""
+    try:
+        # Try basic macOS say command as fallback
+        import platform
+        if platform.system() == "Darwin":  # macOS
+            result = subprocess.run(['say', text], capture_output=True, timeout=10)
+            if result.returncode == 0:
+                print("🔊 Fallback voice output successful")
+                return True
+        
+        # If all else fails, at least log that we would have spoken
+        print(f"📢 Would have spoken: {text[:50]}{'...' if len(text) > 50 else ''}")
+        return False
+        
+    except Exception as e:
+        print(f"❌ Fallback voice failed: {e}")
         return False
 
 def send_intelligent_request(query: str = None, audio_file = None, voice_output_enabled: bool = False, show_debug: bool = False):
@@ -1388,7 +1458,8 @@ with st.sidebar:
                 if success:
                     st.success("✅ Voice test completed!")
                 else:
-                    st.error("❌ Voice test failed. Check your settings.")
+                    st.warning("⚠️ Voice test failed - but voice may still work during responses")
+                    st.info("💡 Note: Voice functionality may be limited in the embedded mode or on some systems")
     
     st.markdown('</div>', unsafe_allow_html=True)
     
@@ -1421,34 +1492,70 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
         
-        st.subheader("🤖 Embedded Agents")
-        # Show embedded agents status
-        embedded_agents = [
-            {'name': 'Language Agent', 'description': 'Natural language processing and response generation'},
-            {'name': 'Voice Agent', 'description': 'Audio processing and speech synthesis'},
-            {'name': 'Retriever Agent', 'description': 'Document search and information retrieval'},
-            {'name': 'Market Agent', 'description': 'Financial data and market analysis'},
-            {'name': 'Analysis Agent', 'description': 'Advanced financial analysis and insights'}
-        ]
-        
-        for agent in embedded_agents:
-            status_color = "#6f42c1"  # Purple for embedded mode
-            st.markdown(f"""
-            <div style="background: white; padding: 12px; border-radius: 8px; margin: 6px 0; 
-                       border-left: 4px solid {status_color}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong style="color: #2c3e50; font-size: 0.9rem;">{agent['name']}</strong>
-                        <p style="margin: 4px 0 0 0; color: #6c757d; font-size: 0.75rem; line-height: 1.3;">
-                            {agent['description'][:80]}{'...' if len(agent['description']) > 80 else ''}
-                        </p>
+        # Initialize agents and show status
+        try:
+            agents = initialize_agents()
+            agent_count = len(agents) if agents else 0
+            
+            st.subheader("🤖 Agent Status")
+            
+            if agent_count > 0:
+                st.success(f"✅ {agent_count}/5 agents initialized successfully")
+            else:
+                st.warning("⚠️ No agents initialized - running in basic mode")
+            
+            # Show individual agent status
+            expected_agents = [
+                ('Language Agent', 'language', 'Natural language processing'),
+                ('Market Agent', 'market', 'Financial data and stock prices'),
+                ('Analysis Agent', 'analysis', 'Portfolio and sentiment analysis'),
+                ('Retriever Agent', 'retriever', 'Document search and retrieval'),
+                ('Voice Agent', 'voice', 'Speech synthesis')
+            ]
+            
+            for agent_name, agent_key, description in expected_agents:
+                if agents and agent_key in agents:
+                    status_color = "#28a745"  # Green
+                    status_text = "Active"
+                    status_icon = "✅"
+                else:
+                    status_color = "#6c757d"  # Gray
+                    status_text = "Unavailable"
+                    status_icon = "❌"
+                
+                st.markdown(f"""
+                <div style="background: white; padding: 8px; border-radius: 6px; margin: 4px 0; 
+                           border-left: 3px solid {status_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #2c3e50; font-size: 0.8rem;">{status_icon} {agent_name}</strong>
+                            <p style="margin: 2px 0 0 0; color: #6c757d; font-size: 0.7rem;">
+                                {description}
+                            </p>
+                        </div>
+                        <span style="background: {status_color}20; color: {status_color}; 
+                                     padding: 2px 6px; border-radius: 8px; font-size: 0.6rem;">
+                            {status_text}
+                        </span>
                     </div>
-                    <span style="background: #e2e3f0; color: #6f42c1; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">
-                        Embedded
-                    </span>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+            
+            # Debug information if enabled
+            if st.session_state.show_debug_enabled:
+                st.markdown("---")
+                st.subheader("🔧 Debug Info")
+                st.write(f"**Agents Available**: {AGENTS_AVAILABLE}")
+                st.write(f"**Initialized Agents**: {list(agents.keys()) if agents else 'None'}")
+                
+                if st.button("🔄 Refresh Agents", help="Reinitialize all agents"):
+                    st.cache_resource.clear()
+                    st.rerun()
+            
+        except Exception as e:
+            st.error(f"❌ Error initializing agents: {str(e)}")
+            st.info("💡 App will run in basic mode with limited functionality")
+        
     else:
         # Original connection status for FastAPI mode (not used in Streamlit Cloud)
         try:
