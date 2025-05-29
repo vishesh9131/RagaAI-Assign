@@ -9,8 +9,5 @@
   $ xcode-select --install
   $ pip install watchdog
             
-2025-05-29 16:50:30.273 Thread 'Thread-4 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
-2025-05-29 16:50:30.284 Thread 'Thread-4 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
-2025-05-29 16:51:02.426 Thread 'Thread-7 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
-2025-05-29 16:51:02.429 Thread 'Thread-7 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
-2025-05-29 16:51:02.580 MediaFileHandler: Missing file eeafde572c5a22f212fa9e4dce7afb9c29db4c65ba9a3f2d32cf7ff4.wav
+2025-05-29 18:16:30.414 Thread 'Thread-3 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-05-29 18:16:30.416 Thread 'Thread-3 (speak_in_background)': missing ScriptRunContext! This warning can be ignored when running in bare mode.

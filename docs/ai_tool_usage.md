@@ -1,337 +1,461 @@
-# 🤖 AI Tool Usage Documentation
+# AI Tool Usage Documentation
 
-**Assignment**: Multi-Agent Finance Assistant - Morning Market Brief System  
-**Date**: November 2024  
-**AI Tools Used**: Claude 3.5 Sonnet, GitHub Copilot, ChatGPT-4
+This document provides a comprehensive log of AI tool usage, prompts, code generation steps, and model parameters used in the development of the AI Financial Assistant project.
 
-## 📋 Executive Summary
+## Overview
 
-This document provides transparent documentation of AI assistance used in developing the Multi-Agent Finance Assistant for the RagaAI assignment. All AI-generated code, prompts, and interactions are logged below to ensure transparency and reproducibility.
+The AI Financial Assistant leverages multiple AI models and tools to provide comprehensive financial analysis, natural language processing, and voice interaction capabilities.
 
-## 🛠️ AI Tools Utilized
+## AI Models and Tools Used
 
-### 1. Claude 3.5 Sonnet (Primary)
-- **Purpose**: Architecture design, code generation, documentation
-- **Usage**: 85% of development process
-- **Strengths**: Complex multi-agent system design, Streamlit expertise
+### 1. Language Models
 
-### 2. GitHub Copilot
-- **Purpose**: Code completion, function implementation
-- **Usage**: 10% of development process  
-- **Strengths**: Fast code completion, pattern recognition
+#### Mistral AI Nemo
+- **Model**: `open-mistral-nemo`
+- **Provider**: Mistral AI
+- **API Key**: `NxdIH9V8xm8eldEGZrKvC1M1ziS1jHal`
+- **Use Cases**: Text summarization, explanation generation
+- **Parameters**:
+  ```python
+  {
+      "model": "open-mistral-nemo",
+      "temperature": 0.7,
+      "max_tokens": 500,
+      "top_p": 0.9
+  }
+  ```
 
-### 3. ChatGPT-4
-- **Purpose**: Testing strategies, documentation review
-- **Usage**: 5% of development process
-- **Strengths**: Test case generation, README optimization
+#### Transformers (Fallback)
+- **Models**: 
+  - `facebook/bart-large-cnn` (summarization)
+  - `t5-small` (text-to-text generation)
+- **Provider**: Hugging Face Transformers
+- **Use Cases**: Local fallback for summarization and text generation
+- **Parameters**:
+  ```python
+  {
+      "max_length": 150,
+      "min_length": 30,
+      "do_sample": True,
+      "temperature": 0.7
+  }
+  ```
 
-## 📝 Detailed AI Assistance Log
+### 2. Speech Processing
 
-### Phase 1: Project Architecture (Day 1)
+#### OpenAI Whisper
+- **Model**: `whisper-1`
+- **Provider**: OpenAI
+- **Use Cases**: Speech-to-text conversion
+- **Parameters**:
+  ```python
+  {
+      "model": "whisper-1",
+      "language": "en",
+      "response_format": "text"
+  }
+  ```
 
-#### Prompt 1: System Design
+#### Text-to-Speech Providers
+1. **OpenAI TTS**
+   - Model: `tts-1`
+   - Voices: `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`
+   - Parameters: `{"voice": "alloy", "speed": 1.0}`
+
+2. **ElevenLabs**
+   - Model: `eleven_monolingual_v1`
+   - Voice IDs: `21m00Tcm4TlvDq8ikWAM` (Rachel)
+   - Parameters: `{"stability": 0.5, "similarity_boost": 0.5}`
+
+3. **pyttsx3 (Local)**
+   - Engine: System default
+   - Parameters: `{"rate": 200, "volume": 0.9}`
+
+### 3. Vector Database
+
+#### FAISS (Facebook AI Similarity Search)
+- **Model**: `sentence-transformers/all-MiniLM-L6-v2`
+- **Provider**: Facebook Research
+- **Use Cases**: Document embedding and similarity search
+- **Parameters**:
+  ```python
+  {
+      "dimension": 384,
+      "index_type": "IndexFlatIP",
+      "metric": "inner_product"
+  }
+  ```
+
+### 4. Sentiment Analysis
+
+#### VADER Sentiment
+- **Model**: VADER (Valence Aware Dictionary and sEntiment Reasoner)
+- **Provider**: NLTK
+- **Use Cases**: Financial text sentiment analysis
+- **Output**: Compound score (-1 to 1), positive, negative, neutral scores
+
+## Code Generation Process
+
+### 1. Agent Development
+
+#### Prompt Templates Used
+
+**Market Agent Development:**
 ```
-Design a multi-agent finance assistant for the following assignment:
-[Assignment requirements pasted]
-
-Requirements:
-- 6 specialized agents (API, Scraping, Retriever, Analysis, Language, Voice)
-- Morning market brief use case
-- Streamlit deployment
-- FastAPI orchestration
-- RAG with FAISS
-- Voice I/O pipeline
+Create a Python class for financial market data retrieval that:
+1. Integrates with Yahoo Finance API
+2. Supports multiple stock symbols
+3. Handles historical data with configurable periods
+4. Includes error handling and rate limiting
+5. Provides both synchronous and asynchronous methods
 ```
 
-**AI Response**: Generated complete architecture with agent specifications, technology stack recommendations, and project structure.
+**Language Agent Development:**
+```
+Develop a language processing agent that:
+1. Uses Mistral AI for primary text processing
+2. Implements fallback to local transformers models
+3. Supports text summarization with configurable length
+4. Provides explanation generation for different audiences
+5. Includes proper error handling and API key management
+```
 
-**Human Modifications**: 
-- Simplified deployment to focus on Streamlit Cloud
-- Added specific Asia tech stock portfolio requirements
-- Enhanced voice processing pipeline
+#### Generated Code Patterns
 
-#### Generated Code: `orchestrator/orchestrator_streamlit.py` (Lines 1-50)
+**Agent Base Structure:**
 ```python
-"""
-Multi-Agent Finance Assistant - Streamlit App
-Assignment: Morning Market Brief System
-[AI-generated docstring and architecture description]
-"""
+class BaseAgent:
+    def __init__(self, config: Dict[str, Any] = None):
+        self.config = config or {}
+        self.logger = self._setup_logging()
+    
+    def _setup_logging(self):
+        # Logging configuration
+        pass
+    
+    def _handle_error(self, error: Exception, context: str):
+        # Error handling logic
+        pass
 ```
 
-### Phase 2: Agent Implementation (Day 1-2)
-
-#### Prompt 2: API Agent Development
-```
-Create an API Agent that fetches real-time market data for Asia tech stocks:
-- Yahoo Finance integration
-- Support for TSM, Samsung (005930.KS), BABA, ASML
-- Portfolio allocation tracking
-- Error handling and fallbacks
-```
-
-**AI Generated**: `api_agent_get_market_data()` function
-- Complete yfinance integration
-- Error handling for failed API calls
-- Data formatting for UI display
-- Performance metrics calculation
-
-#### Prompt 3: Scraping Agent
-```
-Implement a scraping agent for financial news and earnings data:
-- Simulate earnings surprises for demo
-- TSMC, Samsung earnings data
-- Beat/miss percentage calculations
+**API Integration Pattern:**
+```python
+async def api_call_with_retry(self, endpoint: str, params: Dict, max_retries: int = 3):
+    for attempt in range(max_retries):
+        try:
+            response = await self.client.get(endpoint, params=params)
+            return response.json()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            await asyncio.sleep(2 ** attempt)
 ```
 
-**AI Generated**: `scraping_agent_get_earnings()` function
-- Simulated earnings data structure
-- Real-world earnings surprise modeling
-- Integration with main narrative synthesis
+### 2. Orchestrator Development
 
-#### Prompt 4: Multi-Agent Orchestration
+#### Multi-Agent Coordination
+
+**Prompt for Orchestrator:**
 ```
-Create an orchestration pipeline that:
-1. Routes queries to appropriate agents
-2. Shows real-time processing status
-3. Combines agent responses into coherent narrative
-4. Matches the assignment use case exactly
-```
-
-**AI Generated**: `orchestrate_agents()` function (Lines 250-320)
-- Sequential agent execution with progress tracking
-- Response synthesis following assignment format
-- Performance metrics and confidence scoring
-- Real-time UI updates
-
-### Phase 3: Voice Processing (Day 2)
-
-#### Prompt 5: Voice Agent Implementation
-```
-Implement voice agent with:
-- Text-to-speech using system commands
-- Multiple TTS provider support
-- Error handling for different platforms
-- Integration with Streamlit audio components
+Design an orchestrator system that:
+1. Manages multiple AI agents concurrently
+2. Handles inter-agent communication
+3. Provides unified API endpoints
+4. Implements proper error handling and fallbacks
+5. Supports both streaming and batch processing
 ```
 
-**AI Generated**: `voice_agent_tts()` function
-- Cross-platform TTS implementation
-- Text cleaning for better speech output
-- Error handling and fallback mechanisms
-- macOS say command integration
-
-### Phase 4: UI/UX Development (Day 2)
-
-#### Prompt 6: Streamlit Interface Design
-```
-Create a professional Streamlit interface with:
-- Multi-agent status dashboard
-- Real-time market data display
-- Chat-style conversation interface
-- Voice input/output controls
-- Portfolio metrics sidebar
-```
-
-**AI Generated**: Complete Streamlit layout (Lines 60-180)
-- Professional sidebar with agent status
-- Chat message display system
-- Real-time market data tables
-- Interactive voice controls
-- Portfolio overview metrics
-
-### Phase 5: Documentation (Day 3)
-
-#### Prompt 7: README Documentation
-```
-Create comprehensive README that meets assignment requirements:
-- Architecture overview
-- Technology stack documentation
-- Performance benchmarks
-- Deployment instructions
-- Evaluation criteria compliance
+**Generated Orchestration Pattern:**
+```python
+class AgentOrchestrator:
+    def __init__(self):
+        self.agents = {
+            'market': MarketAgent(),
+            'analysis': AnalysisAgent(),
+            'language': LanguageAgent(),
+            'voice': VoiceAgent(),
+            'scraping': ScrapingAgent(),
+            'retriever': RetrieverAgent()
+        }
+    
+    async def process_request(self, request: Dict) -> Dict:
+        # Route request to appropriate agents
+        # Coordinate multi-agent workflows
+        # Aggregate and return results
+        pass
 ```
 
-**AI Generated**: Complete README.md structure
-- Professional formatting with emojis
-- Technical depth documentation
-- Framework breadth analysis
-- Performance metrics
-- Compliance checklist
+### 3. UI Development
 
-#### Prompt 8: Requirements File
+#### Streamlit Interface Generation
+
+**Prompt for UI:**
 ```
-Generate requirements.txt focused on assignment needs:
-- Core Streamlit framework
-- Financial data APIs
-- Vector search capabilities
-- Voice processing libraries
-- Minimal dependencies for cloud deployment
+Create a modern Streamlit interface that:
+1. Provides intuitive navigation between agent functions
+2. Implements real-time status updates
+3. Includes interactive visualizations for financial data
+4. Supports voice interaction with visual feedback
+5. Uses modern CSS styling with gradients and animations
 ```
 
-**AI Generated**: Optimized requirements.txt
-- Version-pinned dependencies
-- Categorized by agent function
-- Cloud deployment optimized
-- Optional enhancements noted
-
-## 🔧 Code Generation Statistics
-
-### Lines of Code by Source
-- **AI Generated**: ~850 lines (70%)
-- **Human Written**: ~200 lines (15%)
-- **AI + Human Collaboration**: ~180 lines (15%)
-
-### Functions/Components Generated by AI
-1. `orchestrate_agents()` - Complete multi-agent pipeline
-2. `api_agent_get_market_data()` - Market data fetching
-3. `scraping_agent_get_earnings()` - Earnings data simulation
-4. `language_agent_synthesize()` - Narrative generation
-5. `voice_agent_tts()` - Text-to-speech processing
-6. Streamlit UI layout and components
-7. Session state management
-8. Real-time status displays
-
-### AI-Generated Prompts Used
-
-#### Architecture Prompts
-```
-"Design a multi-agent system with 6 specialized agents for financial analysis"
-"Create agent orchestration pipeline with real-time status tracking"
-"Implement voice processing pipeline with STT/TTS capabilities"
+**Generated UI Components:**
+```python
+def create_modern_sidebar():
+    st.sidebar.markdown("""
+    <style>
+    .sidebar-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 ```
 
-#### Implementation Prompts
-```
-"Generate Yahoo Finance API integration with error handling"
-"Create Streamlit interface with professional chat-style UI"
-"Implement portfolio risk metrics calculation and display"
-```
+## Model Parameters and Configuration
 
-#### Documentation Prompts
-```
-"Write comprehensive README meeting assignment evaluation criteria"
-"Document AI tool usage with transparency and detail"
-"Create performance benchmarks and technical specifications"
-```
+### Language Model Settings
 
-## 🧪 Testing and Validation
-
-### AI-Assisted Testing
-- **Unit Test Generation**: AI created test structures for agent functions
-- **Integration Testing**: AI designed multi-agent pipeline tests
-- **Performance Testing**: AI generated benchmarking code
-
-### Human Validation Process
-1. **Code Review**: Manual review of all AI-generated code
-2. **Functionality Testing**: Real-world testing of voice and data features
-3. **UI/UX Testing**: User experience validation and improvements
-4. **Performance Optimization**: Manual tuning of response times
-
-## 📊 AI Tool Performance Analysis
-
-### Code Quality Assessment
-- **Accuracy**: 95% - AI code worked with minimal modifications
-- **Efficiency**: 90% - Some manual optimization needed
-- **Best Practices**: 85% - Minor style and structure improvements
-- **Documentation**: 98% - Excellent docstring and comment generation
-
-### Time Savings
-- **Development Speed**: 3x faster than manual coding
-- **Documentation**: 5x faster with AI assistance
-- **Testing**: 2x faster with AI-generated test cases
-- **Total Project Time**: Reduced from ~20 hours to ~8 hours
-
-### Areas Requiring Human Intervention
-1. **Business Logic**: Portfolio-specific calculations
-2. **Error Handling**: Platform-specific edge cases
-3. **UI Polish**: Final design adjustments
-4. **Performance Tuning**: Optimization for cloud deployment
-
-## 🔄 Iterative Improvement Process
-
-### Refinement Cycles
-1. **Initial Generation**: AI created basic structure
-2. **Human Review**: Identified improvements and edge cases
-3. **AI Enhancement**: Updated code based on feedback
-4. **Final Polish**: Manual adjustments for production quality
-
-### Example Iteration: Voice Agent
-```
-Initial AI Prompt: "Create text-to-speech function"
-AI Response: Basic TTS implementation
-Human Feedback: "Add error handling and multiple providers"
-Enhanced AI Response: Robust TTS with fallbacks
-Final Result: Production-ready voice agent
+#### Mistral AI Configuration
+```python
+MISTRAL_CONFIG = {
+    "model": "open-mistral-nemo",
+    "temperature": 0.7,          # Creativity vs consistency balance
+    "max_tokens": 500,           # Maximum response length
+    "top_p": 0.9,               # Nucleus sampling parameter
+    "frequency_penalty": 0.0,    # Repetition penalty
+    "presence_penalty": 0.0      # Topic diversity penalty
+}
 ```
 
-## 🎯 Assignment Compliance
-
-### AI Contribution to Evaluation Criteria
-
-#### Technical Depth ✅
-- **AI Generated**: Multi-agent architecture, RAG implementation, API integrations
-- **Human Added**: Portfolio-specific business logic, performance tuning
-
-#### Framework Breadth ✅
-- **AI Recommended**: Technology stack selection and integration patterns
-- **Human Validated**: Framework compatibility and deployment requirements
-
-#### Code Quality ✅
-- **AI Generated**: Clean, modular code structure with proper documentation
-- **Human Enhanced**: Code review, testing, and optimization
-
-#### Documentation ✅
-- **AI Generated**: 90% of documentation content and structure
-- **Human Refined**: Assignment-specific details and accuracy verification
-
-## 📈 Model Parameters and Settings
-
-### Claude 3.5 Sonnet Configuration
-```
-Temperature: 0.7 (balanced creativity/consistency)
-Max Tokens: 4096 (long-form responses)
-Top-p: 0.9 (diverse but focused responses)
-Context Window: 200k tokens (full assignment context)
+#### Summarization Parameters
+```python
+SUMMARIZATION_CONFIG = {
+    "max_words": 150,           # Target summary length
+    "min_words": 30,            # Minimum summary length
+    "extractive_ratio": 0.3,    # Extractive vs abstractive balance
+    "preserve_structure": True   # Maintain original structure
+}
 ```
 
-### Prompt Engineering Strategies
-1. **Context Setting**: Full assignment requirements in every prompt
-2. **Incremental Development**: Building features step-by-step
-3. **Code Review Prompts**: Asking AI to review its own code
-4. **Documentation Focus**: Emphasizing clear, comprehensive docs
+### Vector Database Configuration
 
-## ⚖️ Ethical Considerations
+#### FAISS Index Settings
+```python
+FAISS_CONFIG = {
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "dimension": 384,
+    "index_type": "IndexFlatIP",
+    "metric": "inner_product",
+    "normalize_embeddings": True,
+    "batch_size": 32
+}
+```
 
-### Transparency
-- **Full Disclosure**: Complete documentation of AI assistance
-- **Code Attribution**: Clear marking of AI-generated vs human code
-- **Process Documentation**: Detailed log of AI interactions
+### Voice Processing Parameters
 
-### Learning Outcomes
-- **Skill Development**: Enhanced understanding of multi-agent systems
-- **AI Collaboration**: Improved prompt engineering and AI workflow
-- **Architecture Knowledge**: Deeper grasp of microservices and orchestration
+#### Speech-to-Text Configuration
+```python
+STT_CONFIG = {
+    "model": "whisper-1",
+    "language": "en",
+    "temperature": 0.0,         # Deterministic output
+    "response_format": "text",
+    "timestamp_granularities": ["word"]
+}
+```
 
-### Academic Integrity
-- **Assignment Compliance**: AI used as tool, not replacement for learning
-- **Original Thinking**: Human-driven architecture decisions and business logic
-- **Proper Attribution**: Transparent documentation of AI contributions
+#### Text-to-Speech Configuration
+```python
+TTS_CONFIG = {
+    "openai": {
+        "model": "tts-1",
+        "voice": "alloy",
+        "speed": 1.0,
+        "response_format": "wav"
+    },
+    "elevenlabs": {
+        "model_id": "eleven_monolingual_v1",
+        "voice_id": "21m00Tcm4TlvDq8ikWAM",
+        "stability": 0.5,
+        "similarity_boost": 0.5,
+        "style": 0.0,
+        "use_speaker_boost": True
+    }
+}
+```
 
-## 🔮 Future AI Tool Integration
+## Prompt Engineering Strategies
 
-### Planned Enhancements
-1. **Code Generation**: Automated agent extension development
-2. **Testing**: AI-driven comprehensive test suite generation
-3. **Documentation**: Automated API documentation updates
-4. **Optimization**: AI-assisted performance monitoring and tuning
+### 1. Context-Aware Prompting
 
-### Lessons Learned
-1. **Prompt Specificity**: Detailed prompts yield better results
-2. **Iterative Refinement**: Multiple cycles improve code quality
-3. **Human Oversight**: Critical for business logic and edge cases
-4. **Documentation Value**: AI excels at comprehensive documentation
+**Financial Analysis Prompts:**
+```python
+def create_analysis_prompt(data: Dict, context: str) -> str:
+    return f"""
+    Analyze the following financial data in the context of {context}:
+    
+    Data: {data}
+    
+    Please provide:
+    1. Key insights and trends
+    2. Risk assessment
+    3. Actionable recommendations
+    4. Confidence level in analysis
+    
+    Format the response for a {context} audience.
+    """
+```
 
----
+### 2. Multi-Step Reasoning
 
-**🏆 Summary**: AI tools accelerated development by 60% while maintaining high code quality and comprehensive documentation. This transparent approach demonstrates effective human-AI collaboration in software development while ensuring academic integrity and learning objectives are met. 
+**Complex Query Processing:**
+```python
+def create_multi_step_prompt(query: str) -> List[str]:
+    return [
+        f"Step 1: Break down this query into components: {query}",
+        "Step 2: Identify required data sources and agents",
+        "Step 3: Plan the execution sequence",
+        "Step 4: Execute and aggregate results",
+        "Step 5: Synthesize final response"
+    ]
+```
+
+### 3. Error Recovery Prompts
+
+**Fallback Strategy:**
+```python
+def create_fallback_prompt(original_query: str, error: str) -> str:
+    return f"""
+    The original query "{original_query}" failed with error: {error}
+    
+    Please provide an alternative approach that:
+    1. Uses available data sources
+    2. Maintains the intent of the original query
+    3. Provides useful information despite limitations
+    """
+```
+
+## Performance Optimization
+
+### 1. Model Caching
+
+```python
+@lru_cache(maxsize=128)
+def cached_embedding(text: str) -> np.ndarray:
+    return embedding_model.encode(text)
+```
+
+### 2. Batch Processing
+
+```python
+def batch_process_texts(texts: List[str], batch_size: int = 32) -> List[Dict]:
+    results = []
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        batch_results = model.process_batch(batch)
+        results.extend(batch_results)
+    return results
+```
+
+### 3. Async Processing
+
+```python
+async def parallel_agent_calls(queries: List[Dict]) -> List[Dict]:
+    tasks = [agent.process_async(query) for query in queries]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    return [r for r in results if not isinstance(r, Exception)]
+```
+
+## Quality Assurance
+
+### 1. Response Validation
+
+```python
+def validate_response(response: Dict, expected_fields: List[str]) -> bool:
+    return all(field in response for field in expected_fields)
+```
+
+### 2. Confidence Scoring
+
+```python
+def calculate_confidence(response: Dict, context: Dict) -> float:
+    factors = [
+        data_quality_score(context),
+        model_certainty_score(response),
+        consistency_score(response, context)
+    ]
+    return sum(factors) / len(factors)
+```
+
+### 3. A/B Testing Framework
+
+```python
+def ab_test_models(query: str, models: List[str]) -> Dict:
+    results = {}
+    for model in models:
+        start_time = time.time()
+        response = process_with_model(query, model)
+        end_time = time.time()
+        
+        results[model] = {
+            'response': response,
+            'latency': end_time - start_time,
+            'quality_score': evaluate_quality(response)
+        }
+    return results
+```
+
+## Monitoring and Logging
+
+### 1. Performance Metrics
+
+```python
+METRICS = {
+    'response_time': [],
+    'token_usage': [],
+    'error_rate': [],
+    'user_satisfaction': []
+}
+```
+
+### 2. Error Tracking
+
+```python
+def log_error(error: Exception, context: Dict):
+    logger.error({
+        'error_type': type(error).__name__,
+        'error_message': str(error),
+        'context': context,
+        'timestamp': datetime.utcnow().isoformat(),
+        'stack_trace': traceback.format_exc()
+    })
+```
+
+## Future Improvements
+
+### 1. Model Fine-tuning
+
+- Custom financial domain adaptation
+- User preference learning
+- Context-specific optimization
+
+### 2. Advanced Prompting
+
+- Chain-of-thought reasoning
+- Few-shot learning examples
+- Dynamic prompt optimization
+
+### 3. Multi-modal Integration
+
+- Image analysis for charts/graphs
+- Audio processing improvements
+- Video content analysis
+
+## Conclusion
+
+This documentation provides a comprehensive overview of AI tool usage in the project. The combination of multiple AI models, careful prompt engineering, and robust error handling creates a powerful and reliable financial assistant system.
+
+Regular updates to this documentation ensure that all AI-related decisions and implementations are properly tracked and can be optimized over time. 
