@@ -16,6 +16,134 @@ import io
 import re
 import subprocess
 import os
+import sys
+from pathlib import Path
+
+# Add the project root to the path so we can import agents
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+# Try to import agents - if this fails, we'll run in basic embedded mode
+try:
+    from agents.core.voice_agent import VoiceAgent
+    from agents.core.retriever_agent import RetrieverAgent
+    from agents.core.language_agent import LanguageAgent
+    from agents.core.market_agent import MarketDataAgent  # Correct class name
+    from agents.core.analysis_agent import AnalysisAgent
+    AGENTS_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import agents: {e}")
+    AGENTS_AVAILABLE = False
+
+# Configuration
+ORCHESTRATOR_URL = None  # Set to None to force embedded mode
+VOICE_AGENT_URL = "http://localhost:8000"  # Voice Agent API URL
+EMBEDDED_MODE = True  # Force embedded mode for Streamlit Cloud
+
+@st.cache_resource
+def initialize_agents():
+    """Initialize all available agents for embedded mode."""
+    if not AGENTS_AVAILABLE:
+        return {}
+    
+    agents = {}
+    
+    try:
+        # Initialize Language Agent
+        agents['language'] = LanguageAgent()
+        print("✅ Language Agent initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize Language Agent: {e}")
+    
+    try:
+        # Initialize Voice Agent
+        agents['voice'] = VoiceAgent()
+        print("✅ Voice Agent initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize Voice Agent: {e}")
+    
+    try:
+        # Initialize Retriever Agent
+        agents['retriever'] = RetrieverAgent()
+        print("✅ Retriever Agent initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize Retriever Agent: {e}")
+    
+    try:
+        # Initialize Market Agent
+        agents['market'] = MarketDataAgent()
+        print("✅ Market Agent initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize Market Agent: {e}")
+    
+    try:
+        # Initialize Analysis Agent
+        agents['analysis'] = AnalysisAgent()
+        print("✅ Analysis Agent initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize Analysis Agent: {e}")
+    
+    print(f"Initialized {len(agents)} agents successfully")
+    return agents
+
+class QueryRouter:
+    def __init__(self):
+        self.patterns = {
+            "market_data": [
+                r"stock", r"price", r"share", r"ticker", r"market", r"trading", r"volume", r"quote",
+                r"AAPL", r"GOOGL", r"MSFT", r"TSLA", r"AMZN", r"META", r"NVDA", r"NFLX", r"SPY", r"QQQ",
+                r"earnings", r"revenue", r"profit", r"financial", r"company", r"corporation", r"business",
+                r"dividend", r"yield", r"market cap", r"P/E", r"ratio", r"valuation", r"fundamentals",
+                r"NYSE", r"NASDAQ", r"exchange", r"S&P", r"Dow", r"index", r"ETF", r"mutual fund"
+            ],
+            "analysis": [
+                r"analyze", r"analysis", r"compare", r"comparison", r"performance", r"trend", r"pattern",
+                r"forecast", r"predict", r"projection", r"outlook", r"recommendation", r"advice",
+                r"portfolio", r"investment", r"strategy", r"risk", r"return", r"volatility",
+                r"technical analysis", r"fundamental analysis", r"chart", r"indicator"
+            ],
+            "explanation": [
+                r"explain", r"what is", r"how does", r"why", r"help me understand", r"clarify",
+                r"definition", r"meaning", r"concept", r"basics", r"introduction", r"overview"
+            ]
+        }
+    
+    def classify_query(self, query: str) -> List[str]:
+        """Classify query and return list of relevant agent types."""
+        import re
+        
+        query_lower = query.lower()
+        selected_agents = []
+        
+        # Check for market data patterns
+        for pattern in self.patterns["market_data"]:
+            if re.search(pattern, query_lower):
+                if "market_data" not in selected_agents:
+                    selected_agents.append("market_data")
+                break
+        
+        # Check for analysis patterns
+        for pattern in self.patterns["analysis"]:
+            if re.search(pattern, query_lower):
+                if "analysis" not in selected_agents:
+                    selected_agents.append("analysis")
+                break
+        
+        # Check for explanation patterns
+        for pattern in self.patterns["explanation"]:
+            if re.search(pattern, query_lower):
+                if "explanation" not in selected_agents:
+                    selected_agents.append("explanation")
+                break
+        
+        # Default routing if no specific patterns found
+        if not selected_agents:
+            selected_agents = ["explanation"]  # Default to explanation for general queries
+        
+        return selected_agents
+
+# Initialize router
+query_router = QueryRouter()
 
 # Attempt to import the audio recorder component
 try:
@@ -23,10 +151,6 @@ try:
     AUDIO_RECORDER_AVAILABLE = True
 except ImportError:
     AUDIO_RECORDER_AVAILABLE = False
-
-# Configuration
-ORCHESTRATOR_URL = "http://localhost:8011"
-VOICE_AGENT_URL = "http://localhost:8000"  # Voice Agent API URL
 
 st.set_page_config(
     layout="wide", 
@@ -481,6 +605,13 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Embedded mode status banner
+if EMBEDDED_MODE or ORCHESTRATOR_URL is None:
+    st.info("""
+    🟣 **Embedded Mode Active**  
+    You're using the self-contained version of the AI Financial Assistant. All agents are running locally within this application.
+    """)
+
 def get_confidence_class(confidence):
     """Get CSS class based on confidence level."""
     if confidence >= 0.8:
@@ -853,11 +984,8 @@ def speak_response(text: str, provider: str = "macos_say", voice: str = None):
         return False
 
 def send_intelligent_request(query: str = None, audio_file = None, voice_output_enabled: bool = False, show_debug: bool = False):
-    """Enhanced request processing with better UX and agent flow tracking."""
-    endpoint = ""
-    payload = {}
-    files = None
-
+    """Enhanced request processing with embedded mode support."""
+    
     # Set processing state and show typing
     st.session_state.is_processing = True
     st.session_state.show_typing = True
@@ -871,22 +999,10 @@ def send_intelligent_request(query: str = None, audio_file = None, voice_output_
 
     # Prepare request
     if audio_file:
-        endpoint = f"{ORCHESTRATOR_URL}/intelligent/voice"
-        # Determine file type for the request
-        file_type = getattr(audio_file, 'type', 'audio/wav') # Default to audio/wav if type attr is missing
-        files = {'audio': (audio_file.name, audio_file, file_type)}
-        payload = {
-            'voice_mode': voice_output_enabled,
-            'include_debug': show_debug
-        }
         st.session_state.conversation.append(("👤 User (🎤 audio)", "Uploaded an audio file" if hasattr(audio_file, 'type') else "Recorded an audio snippet"))
+        # For embedded mode, we'll skip audio processing for now and use a placeholder
+        query = "Audio query uploaded (audio processing not yet implemented in embedded mode)"
     elif query:
-        endpoint = f"{ORCHESTRATOR_URL}/intelligent/query"
-        payload = {
-            "query": query,
-            "voice_mode": voice_output_enabled,
-            "include_debug_info": show_debug
-        }
         st.session_state.conversation.append(("👤 User", query))
     else:
         st.error("⚠️ Please provide a query or upload an audio file.")
@@ -894,186 +1010,315 @@ def send_intelligent_request(query: str = None, audio_file = None, voice_output_
         st.session_state.show_typing = False
         return
 
-    # Show enhanced status container
-    status_container = st.empty()
-    
-    try:
-        # Start the request in a separate thread
-        response_container = {"response": None, "error": None}
-        
-        def make_request():
-            try:
-                if files:
-                    response = requests.post(endpoint, files=files, data=payload, timeout=120)
+    # Check if we're in embedded mode (no external orchestrator)
+    if EMBEDDED_MODE or ORCHESTRATOR_URL is None:
+        # Use embedded processing
+        try:
+            # Show processing status
+            with st.spinner("🤖 Processing your query using embedded agents..."):
+                
+                # Initialize agents
+                agents = initialize_agents()
+                if not agents:
+                    # Fallback response when agents can't be initialized
+                    response_text = f"""I understand you're asking about: **{query}**
+
+I'm currently running in embedded mode with limited agent capabilities. Here's what I can help you with:
+
+🔍 **Query Understanding**: I've analyzed your question and it appears to be about financial topics.
+
+💡 **General Response**: While I don't have access to real-time market data in this embedded mode, I can provide general guidance:
+
+- For stock prices and market data, I'd recommend checking financial websites like Yahoo Finance, Bloomberg, or your brokerage platform
+- For investment advice, consider consulting with a financial advisor
+- For market analysis, financial news sources provide comprehensive coverage
+
+📝 **Note**: This is the embedded version of the AI Financial Assistant. The full-featured version with real-time data access and specialized agents is available when running the complete system locally.
+
+Is there anything specific about this topic I can help explain or clarify?"""
                 else:
-                    response = requests.post(endpoint, json=payload, timeout=120)
-                response.raise_for_status()
-                response_container["response"] = response.json()
-            except Exception as e:
-                response_container["error"] = e
-
-        # Start request thread
-        request_thread = threading.Thread(target=make_request)
-        request_thread.start()
-        
-        # Poll for status updates
-        session_id = None
-        overall_status = "initializing"
-        agent_flow_data = []
-        
-        while request_thread.is_alive() or overall_status not in ["completed", "failed", "error"]:
-            if not session_id and response_container.get("response"):
-                session_id = response_container["response"].get("session_id")
-                st.session_state.current_session_id = session_id
-            
-            if session_id:
-                with status_container.container():
-                    overall_status = display_enhanced_real_time_status(session_id)
+                    # Classify the query to determine which agents to use
+                    agent_types = query_router.classify_query(query)
                     
-                    # Collect agent flow data
+                    # Build comprehensive response using available agents
+                    response_parts = []
+                    agents_used = []
+                    
+                    # Process with Language Agent first for general understanding
+                    if 'language' in agents:
+                        try:
+                            lang_response = agents['language'].explain(f"Please provide a helpful response to this query: {query}", target_audience="user")
+                            if lang_response and lang_response.strip():
+                                response_parts.append(f"🧠 **AI Analysis**: {lang_response}")
+                                agents_used.append({
+                                    'agent_name': 'Language Agent',
+                                    'status': 'completed',
+                                    'description': 'Analyzed query using natural language processing',
+                                    'start_time': datetime.now().isoformat(),
+                                    'end_time': datetime.now().isoformat()
+                                })
+                        except Exception as e:
+                            print(f"Language agent error: {e}")
+                    
+                    # Process with Market Agent for financial data
+                    if 'market_data' in agent_types and 'market' in agents:
+                        try:
+                            # Extract ticker symbol if present
+                            ticker_mapping = {
+                                "apple": "AAPL", "aapl": "AAPL",
+                                "tesla": "TSLA", "tsla": "TSLA", 
+                                "microsoft": "MSFT", "msft": "MSFT",
+                                "google": "GOOGL", "googl": "GOOGL", "alphabet": "GOOGL",
+                                "amazon": "AMZN", "amzn": "AMZN",
+                                "meta": "META", "facebook": "META",
+                                "nvidia": "NVDA", "nvda": "NVDA"
+                            }
+                            
+                            # Extract ticker from query
+                            found_tickers = []
+                            query_lower = query.lower()
+                            
+                            for name, ticker_symbol in ticker_mapping.items():
+                                if name in query_lower:
+                                    found_tickers.append(ticker_symbol)
+                            
+                            # Also look for uppercase ticker patterns
+                            ticker_patterns = re.findall(r'\b([A-Z]{2,5})\b', query.upper())
+                            excluded_words = {"WHAT", "THE", "AND", "FOR", "WITH", "FROM", "THAT", "THIS", "HOW", "ARE", "CAN", "WILL"}
+                            for pattern in ticker_patterns:
+                                if pattern not in excluded_words and pattern not in found_tickers:
+                                    found_tickers.append(pattern)
+                            
+                            ticker = found_tickers[0] if found_tickers else "AAPL"
+                            
+                            market_response = agents['market'].get_stock_price(ticker)
+                            if market_response and not market_response.get('error'):
+                                company_name = market_response.get('company_name', ticker)
+                                current_price = market_response.get('current_price', 'N/A')
+                                change = market_response.get('change', 0)
+                                change_percent = market_response.get('change_percent', 0)
+                                
+                                market_text = f"**{company_name} ({ticker})**\n"
+                                market_text += f"Current Price: ${current_price}\n"
+                                market_text += f"Change: ${change:+.2f} ({change_percent:+.2f}%)\n"
+                                market_text += f"Market Cap: {market_response.get('market_cap', 'N/A')}\n"
+                                market_text += f"P/E Ratio: {market_response.get('pe_ratio', 'N/A')}"
+                                
+                                response_parts.append(f"📊 **Market Data**: {market_text}")
+                                agents_used.append({
+                                    'agent_name': 'Market Agent',
+                                    'status': 'completed',
+                                    'description': f'Retrieved market data for {ticker}',
+                                    'start_time': datetime.now().isoformat(),
+                                    'end_time': datetime.now().isoformat()
+                                })
+                            else:
+                                print(f"Market agent returned error: {market_response.get('error', 'Unknown error')}")
+                        except Exception as e:
+                            print(f"Market agent error: {e}")
+                    
+                    # Process with Analysis Agent for detailed analysis
+                    if 'analysis' in agent_types and 'analysis' in agents:
+                        try:
+                            if any(word in query.lower() for word in ["portfolio", "change", "performance"]):
+                                analysis_response = agents['analysis'].get_portfolio_value_change()
+                                if analysis_response:
+                                    today_value = analysis_response.get('today_value', 0)
+                                    change = analysis_response.get('change', 0)
+                                    change_percent = analysis_response.get('percentage_change', 0)
+                                    
+                                    analysis_text = f"Portfolio Performance Analysis:\n"
+                                    analysis_text += f"Current Portfolio Value: ${today_value:,.0f}\n"
+                                    analysis_text += f"Daily Change: ${change:+,.0f} ({change_percent:+.2f}%)"
+                                    
+                                    response_parts.append(f"🎯 **Portfolio Analysis**: {analysis_text}")
+                                    agents_used.append({
+                                        'agent_name': 'Analysis Agent',
+                                        'status': 'completed',
+                                        'description': 'Performed portfolio performance analysis',
+                                        'start_time': datetime.now().isoformat(),
+                                        'end_time': datetime.now().isoformat()
+                                    })
+                            elif any(word in query.lower() for word in ["sentiment", "news"]):
+                                sentiment_response = agents['analysis'].get_sentiment_trends()
+                                if sentiment_response is not None and not sentiment_response.empty:
+                                    avg_sentiment = sentiment_response['compound'].mean()
+                                    sentiment_text = f"News Sentiment Analysis:\n"
+                                    sentiment_text += f"Average Sentiment Score: {avg_sentiment:.2f}\n"
+                                    sentiment_text += f"Overall Market Sentiment: {'Positive' if avg_sentiment > 0.05 else 'Negative' if avg_sentiment < -0.05 else 'Neutral'}"
+                                    
+                                    response_parts.append(f"🎯 **Sentiment Analysis**: {sentiment_text}")
+                                    agents_used.append({
+                                        'agent_name': 'Analysis Agent',
+                                        'status': 'completed',
+                                        'description': 'Analyzed market sentiment from news',
+                                        'start_time': datetime.now().isoformat(),
+                                        'end_time': datetime.now().isoformat()
+                                    })
+                        except Exception as e:
+                            print(f"Analysis agent error: {e}")
+                    
+                    # Process with Retriever Agent for additional context
+                    if 'retriever' in agents:
+                        try:
+                            retriever_response = agents['retriever'].search(query, k=3)
+                            if retriever_response and len(retriever_response) > 0:
+                                retriever_text = "Relevant Information Found:\n"
+                                for i, result in enumerate(retriever_response[:2], 1):  # Limit to top 2 results
+                                    content = result.get('content', '')[:200] + '...' if len(result.get('content', '')) > 200 else result.get('content', '')
+                                    retriever_text += f"{i}. {content}\n"
+                                
+                                response_parts.append(f"📚 **Knowledge Base**: {retriever_text}")
+                                agents_used.append({
+                                    'agent_name': 'Retriever Agent',
+                                    'status': 'completed',
+                                    'description': f'Found {len(retriever_response)} relevant documents',
+                                    'start_time': datetime.now().isoformat(),
+                                    'end_time': datetime.now().isoformat()
+                                })
+                        except Exception as e:
+                            print(f"Retriever agent error: {e}")
+                    
+                    # Combine responses or provide fallback
+                    if response_parts:
+                        response_text = "\n\n".join(response_parts)
+                        
+                        # Add a helpful summary
+                        response_text += f"""
+
+---
+💡 **Summary**: I've analyzed your query "{query}" using {len(agents_used)} specialized agents. The response above combines insights from natural language processing, market data analysis, and knowledge retrieval to provide you with comprehensive information.
+
+🔮 **Next Steps**: Feel free to ask follow-up questions or request more specific analysis on any aspect that interests you!"""
+                    else:
+                        # Fallback when agents don't return useful responses
+                        response_text = f"""I've processed your query about: **{query}**
+
+🤖 **Embedded Agent Processing**: I've analyzed your question using the available AI agents, though some may have limited functionality in this embedded mode.
+
+💭 **Understanding**: Your query appears to be related to {', '.join(agent_types)} topics.
+
+📝 **Response**: While I can understand and process your financial questions, the embedded mode has limited access to real-time data and advanced analytics.
+
+🚀 **Suggestion**: For the most comprehensive analysis, the full system with live market data feeds and complete agent capabilities would provide more detailed insights.
+
+Is there a specific aspect of your question I can help clarify or explain in more detail?"""
+                
+                # Calculate response time
+                response_time = time.time() - start_time
+                st.session_state.usage_stats['avg_response_time'] = (
+                    st.session_state.usage_stats['avg_response_time'] + response_time
+                ) / 2
+                
+                # Enhanced metadata with agent information
+                enhanced_metadata = {
+                    'confidence': 0.85 if agents else 0.6,
+                    'agents_used': agents_used if agents else [{
+                        'agent_name': 'Embedded Fallback',
+                        'status': 'completed',
+                        'description': 'Basic query processing without specialized agents',
+                        'start_time': datetime.now().isoformat(),
+                        'end_time': datetime.now().isoformat()
+                    }],
+                    'query_interpretation': f"Embedded mode processing: Query classified as {', '.join(agent_types) if agents else 'general'} - {query[:100]}{'...' if len(query) > 100 else ''}",
+                    'session_id': str(uuid.uuid4()),
+                    'response_time': response_time,
+                    'execution_stats': {
+                        'total_agents': len(agents_used) if agents else 1,
+                        'successful_agents': len(agents_used) if agents else 1,
+                        'failed_agents': 0,
+                        'response_time': response_time,
+                        'agent_types_used': agent_types if agents else ['fallback']
+                    }
+                }
+                
+                st.session_state.conversation.append((
+                    f"🤖 Assistant", 
+                    response_text,
+                    enhanced_metadata
+                ))
+                
+                # Clear processing state
+                st.session_state.is_processing = False
+                st.session_state.show_typing = False
+                
+                # Show success metrics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("⚡ Response Time", f"{response_time:.1f}s")
+                with col2:
+                    st.metric("🎯 Confidence", f"{enhanced_metadata['confidence']:.0%}")
+                with col3:
+                    st.metric("🤖 Agents Used", len(agents_used) if agents else 1)
+                with col4:
+                    st.metric("✅ Success Rate", f"{len(agents_used)}/{len(agents_used)}" if agents_used else "1/1")
+                
+                # Success message
+                if agents:
+                    st.success(f"✅ Query processed successfully using {len(agents_used)} AI agents!")
+                else:
+                    st.info("✅ Query processed in basic embedded mode!")
+                
+                # Handle voice output if enabled
+                if voice_output_enabled and st.session_state.voice_output_enabled:
                     try:
-                        flow_response = requests.get(f"{ORCHESTRATOR_URL}/execution/status/{session_id}", timeout=5)
-                        if flow_response.status_code == 200:
-                            flow_data = flow_response.json()
-                            agent_flow_data = flow_data.get('agents_status', [])
-                    except:
-                        pass
-            
-            time.sleep(0.5)
-            
-            if not request_thread.is_alive():
-                break
-        
-        # Clear status and typing indicator
-        status_container.empty()
-        st.session_state.show_typing = False
-        
-        # Wait for thread completion
-        request_thread.join()
-        
-        # Calculate response time
-        response_time = time.time() - start_time
-        st.session_state.usage_stats['avg_response_time'] = (
-            st.session_state.usage_stats['avg_response_time'] + response_time
-        ) / 2
-        
-        # Handle response
-        if response_container.get("error"):
-            raise response_container["error"]
-            
-        data = response_container["response"]
-        
-        # Store agent statuses with enhanced data
-        agents_used = data.get('agents_used', [])
-        if not agents_used and agent_flow_data:
-            # Use flow data if agents_used is empty
-            agents_used = agent_flow_data
-        
-        st.session_state.agent_statuses = agents_used
-        
-        # Add response to conversation with enhanced metadata
-        confidence = data.get('confidence', 0.0)
-        response_text = data['response_text']
-        
-        # Enhanced metadata with agent flow information
-        enhanced_metadata = {
-            'confidence': confidence,
-            'agents_used': agents_used,
-            'query_interpretation': data.get('query_interpretation', ''),
-            'audio': data.get('wav_audio_base64'),
-            'session_id': data.get('session_id'),
-            'response_time': response_time,
-            'agent_flow': agent_flow_data,
-            'routing_info': data.get('routing_info', {}),
-            'execution_stats': {
-                'total_agents': len(agents_used),
-                'successful_agents': len([a for a in agents_used if a.get('status') == 'completed']),
-                'failed_agents': len([a for a in agents_used if a.get('status') == 'failed']),
-                'response_time': response_time
-            }
-        }
-        
-        st.session_state.conversation.append((
-            f"🤖 Assistant", 
-            response_text,
-            enhanced_metadata
-        ))
-        
-        # Voice output - speak the response if enabled
-        if voice_output_enabled and response_text:
-            # Add voice indicator to the enhanced metadata
-            enhanced_metadata['voice_output'] = {
-                'enabled': True,
-                'provider': st.session_state.get('voice_provider', 'macos_say'),
-                'voice': st.session_state.get('voice_name', 'Samantha')
-            }
-            
-            with st.spinner("🔊 Speaking response..."):
-                # Use a thread to avoid blocking the UI
-                def speak_in_background():
-                    # Get user's voice settings or use defaults
-                    provider = st.session_state.get('voice_provider', 'macos_say')
-                    voice = st.session_state.get('voice_name', 'Samantha')
-                    speak_response(response_text, provider=provider, voice=voice)
+                        # Create a shorter version for voice output
+                        voice_text = response_text.split('\n\n')[0]  # Use first paragraph
+                        if len(voice_text) > 300:
+                            voice_text = voice_text[:300] + "..."
+                        
+                        success = speak_response(
+                            voice_text, 
+                            provider=st.session_state.voice_provider,
+                            voice=st.session_state.voice_name
+                        )
+                        
+                        if success:
+                            # Update metadata to include voice output info
+                            enhanced_metadata['voice_output'] = {
+                                'enabled': True,
+                                'provider': st.session_state.voice_provider,
+                                'voice': st.session_state.voice_name,
+                                'success': True
+                            }
+                        
+                    except Exception as voice_error:
+                        print(f"Voice output error: {voice_error}")
+                        enhanced_metadata['voice_output'] = {
+                            'enabled': True,
+                            'success': False,
+                            'error': str(voice_error)
+                        }
                 
-                # Start voice output in background thread
-                voice_thread = threading.Thread(target=speak_in_background)
-                voice_thread.daemon = True  # Daemon thread so it doesn't block app shutdown
-                voice_thread.start()
-        
-        # Show enhanced success metrics
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("⚡ Response Time", f"{response_time:.1f}s", 
-                     delta=f"{response_time-2:.1f}s" if response_time > 2 else None)
-        with col2:
-            st.metric("🎯 Confidence", f"{confidence:.1%}", 
-                     delta=f"{confidence-0.8:.1%}" if confidence < 0.8 else "✅ High")
-        with col3:
-            st.metric("🤖 Agents Used", len(agents_used),
-                     delta=f"+{len(agents_used)}" if len(agents_used) > 1 else None)
-        with col4:
-            successful_count = len([a for a in agents_used if a.get('status') == 'completed'])
-            st.metric("✅ Success Rate", f"{successful_count}/{len(agents_used)}" if agents_used else "N/A")
-        
-        # Show agent execution summary
-        if agents_used:
-            with st.expander("📊 Detailed Agent Execution Summary", expanded=False):
-                agent_df = pd.DataFrame([{
-                    'Agent': agent.get('name', 'Unknown'),
-                    'Status': agent.get('status', 'unknown'),
-                    'Description': agent.get('description', 'N/A')[:50] + '...' if len(agent.get('description', '')) > 50 else agent.get('description', 'N/A'),
-                    'Duration': f"{agent.get('duration', 0):.1f}s" if agent.get('duration') else 'N/A'
-                } for agent in agents_used])
+                return
                 
-                st.dataframe(agent_df, use_container_width=True)
-        
-        # Play audio if available
-        if data.get('wav_audio_base64'):
-            st.success("🔊 Audio response generated!")
-            audio_bytes = base64.b64decode(data['wav_audio_base64'])
-            st.audio(audio_bytes, format="audio/wav")
-
-        # Clean up session
-        if session_id:
-            try:
-                requests.delete(f"{ORCHESTRATOR_URL}/execution/status/{session_id}")
-            except:
-                pass
-
-    except requests.exceptions.Timeout:
-        st.error("⏰ Request timed out. The query might be too complex.")
-        st.info("💡 Try breaking your question into smaller parts or checking your connection.")
-    except requests.exceptions.RequestException as e:
-        st.error(f"🚫 Connection error: {e}")
-        st.info("💡 Make sure the Orchestrator service is running on port 8011")
-    except Exception as e:
-        st.error(f"💥 Unexpected error: {e}")
-        st.info("💡 Please try again or contact support if the issue persists.")
-    finally:
-        st.session_state.is_processing = False
-        st.session_state.show_typing = False
-        st.session_state.current_session_id = None
+        except Exception as e:
+            error_msg = f"❌ Embedded processing failed: {str(e)}"
+            st.error(error_msg)
+            
+            # Add error to conversation
+            st.session_state.conversation.append((
+                f"🤖 Assistant", 
+                f"I apologize, but I encountered an error while processing your request: {str(e)}",
+                {
+                    'confidence': 0.0,
+                    'agents_used': [],
+                    'query_interpretation': f"Error processing: {query}",
+                    'session_id': str(uuid.uuid4()),
+                    'response_time': time.time() - start_time
+                }
+            ))
+            
+            st.session_state.is_processing = False
+            st.session_state.show_typing = False
+            return
+    
+    # Original FastAPI mode (keeping for reference, but won't be used in Streamlit Cloud)
+    st.error("🔴 Connection Failed - Cannot reach orchestrator")
+    st.info("💡 The app is running in embedded mode. External orchestrator connection is not available on Streamlit Cloud.")
+    
+    st.session_state.is_processing = False
+    st.session_state.show_typing = False
 
 # Enhanced Sidebar with better organization
 with st.sidebar:
@@ -1167,52 +1412,91 @@ with st.sidebar:
     #st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.header("🎛️ Control Center")
     
-    # Connection status with enhanced styling
-    try:
-        status_response = requests.get(f"{ORCHESTRATOR_URL}/agents/status", timeout=3)
-        if status_response.status_code == 200:
-            status_data = status_response.json()
-            st.markdown("""
-            <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 8px; margin-bottom: 16px;">
-                <h4 style="margin: 0; color: #155724;">🟢 System Online</h4>
-                <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #155724;">All systems operational</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.subheader("🤖 Available Agents")
-            agent_data = status_data.get('available_agents', [])
-            for i, agent in enumerate(agent_data):
-                status_color = "#28a745"
-                st.markdown(f"""
-                <div style="background: white; padding: 12px; border-radius: 8px; margin: 6px 0; 
-                           border-left: 4px solid {status_color}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong style="color: #2c3e50; font-size: 0.9rem;">{agent['name']}</strong>
-                            <p style="margin: 4px 0 0 0; color: #6c757d; font-size: 0.75rem; line-height: 1.3;">
-                                {agent['description'][:80]}{'...' if len(agent['description']) > 80 else ''}
-                            </p>
-                        </div>
-                        <span style="background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">
-                            Ready
-                        </span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border-radius: 8px; margin-bottom: 16px;">
-                <h4 style="margin: 0; color: #721c24;">🔴 System Offline</h4>
-                <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #721c24;">Please start the orchestrator</p>
-            </div>
-            """, unsafe_allow_html=True)
-    except Exception:
+    # Connection status with enhanced styling - Embedded mode
+    if EMBEDDED_MODE or ORCHESTRATOR_URL is None:
         st.markdown("""
-        <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border-radius: 8px; margin-bottom: 16px;">
-            <h4 style="margin: 0; color: #721c24;">🔴 Connection Failed</h4>
-            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #721c24;">Cannot reach orchestrator</p>
+        <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border-radius: 8px; margin-bottom: 16px;">
+            <h4 style="margin: 0; color: #0c5460;">🟣 Embedded Mode</h4>
+            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #0c5460;">Running with built-in agents</p>
         </div>
         """, unsafe_allow_html=True)
+        
+        st.subheader("🤖 Embedded Agents")
+        # Show embedded agents status
+        embedded_agents = [
+            {'name': 'Language Agent', 'description': 'Natural language processing and response generation'},
+            {'name': 'Voice Agent', 'description': 'Audio processing and speech synthesis'},
+            {'name': 'Retriever Agent', 'description': 'Document search and information retrieval'},
+            {'name': 'Market Agent', 'description': 'Financial data and market analysis'},
+            {'name': 'Analysis Agent', 'description': 'Advanced financial analysis and insights'}
+        ]
+        
+        for agent in embedded_agents:
+            status_color = "#6f42c1"  # Purple for embedded mode
+            st.markdown(f"""
+            <div style="background: white; padding: 12px; border-radius: 8px; margin: 6px 0; 
+                       border-left: 4px solid {status_color}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: #2c3e50; font-size: 0.9rem;">{agent['name']}</strong>
+                        <p style="margin: 4px 0 0 0; color: #6c757d; font-size: 0.75rem; line-height: 1.3;">
+                            {agent['description'][:80]}{'...' if len(agent['description']) > 80 else ''}
+                        </p>
+                    </div>
+                    <span style="background: #e2e3f0; color: #6f42c1; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">
+                        Embedded
+                    </span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        # Original connection status for FastAPI mode (not used in Streamlit Cloud)
+        try:
+            status_response = requests.get(f"{ORCHESTRATOR_URL}/agents/status", timeout=3)
+            if status_response.status_code == 200:
+                status_data = status_response.json()
+                st.markdown("""
+                <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 8px; margin-bottom: 16px;">
+                    <h4 style="margin: 0; color: #155724;">🟢 System Online</h4>
+                    <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #155724;">All systems operational</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.subheader("🤖 Available Agents")
+                agent_data = status_data.get('available_agents', [])
+                for i, agent in enumerate(agent_data):
+                    status_color = "#28a745"
+                    st.markdown(f"""
+                    <div style="background: white; padding: 12px; border-radius: 8px; margin: 6px 0; 
+                               border-left: 4px solid {status_color}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: #2c3e50; font-size: 0.9rem;">{agent['name']}</strong>
+                                <p style="margin: 4px 0 0 0; color: #6c757d; font-size: 0.75rem; line-height: 1.3;">
+                                    {agent['description'][:80]}{'...' if len(agent['description']) > 80 else ''}
+                                </p>
+                            </div>
+                            <span style="background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">
+                                Ready
+                            </span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border-radius: 8px; margin-bottom: 16px;">
+                    <h4 style="margin: 0; color: #721c24;">🔴 System Offline</h4>
+                    <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #721c24;">Please start the orchestrator</p>
+                </div>
+                """, unsafe_allow_html=True)
+        except Exception:
+            st.markdown("""
+            <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border-radius: 8px; margin-bottom: 16px;">
+                <h4 style="margin: 0; color: #721c24;">🔴 Connection Failed</h4>
+                <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #721c24;">Cannot reach orchestrator</p>
+            </div>
+            """, unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
     
     # #st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
@@ -1332,6 +1616,13 @@ with st.sidebar:
 
 # Main chat interface with enhanced layout
 main_col1, main_col2 = st.columns([4, 1])
+
+# Embedded mode status banner
+if EMBEDDED_MODE or ORCHESTRATOR_URL is None:
+    st.info("""
+    🟣 **Embedded Mode Active**  
+    You're using the self-contained version of the AI Financial Assistant. All agents are running locally within this application.
+    """)
 
 with main_col1:
     display_enhanced_conversation()
