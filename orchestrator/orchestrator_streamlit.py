@@ -24,9 +24,13 @@ try:
 except ImportError:
     AUDIO_RECORDER_AVAILABLE = False
 
-# Configuration
-ORCHESTRATOR_URL = "http://localhost:8011"
-VOICE_AGENT_URL = "http://localhost:8000"  # Voice Agent API URL
+# --- Deployment-friendly configuration ---
+# Set ORCHESTRATOR_URL and VOICE_AGENT_URL in .streamlit/secrets.toml or as environment variables for deployment.
+# Example secrets.toml:
+# ORCHESTRATOR_URL = "https://your-orchestrator-url"
+# VOICE_AGENT_URL = "https://your-voice-agent-url"
+ORCHESTRATOR_URL = st.secrets.get("ORCHESTRATOR_URL", os.environ.get("ORCHESTRATOR_URL", "http://localhost:8011"))
+VOICE_AGENT_URL = st.secrets.get("VOICE_AGENT_URL", os.environ.get("VOICE_AGENT_URL", "http://localhost:8000"))
 
 st.set_page_config(
     layout="wide", 
