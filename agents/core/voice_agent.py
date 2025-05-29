@@ -48,17 +48,18 @@ class VoiceAgent:
         if self._whisper_model is not None:
             return self._whisper_model
         try:
-            import whisper
-            self._whisper_model = whisper.load_model(self.whisper_model_size)
+            # Try faster-whisper first (more stable for deployment)
+            from faster_whisper import WhisperModel
+            self._whisper_model = WhisperModel(self.whisper_model_size)
             return self._whisper_model
         except ImportError:
-            # Try faster-whisper
+            # Fallback to openai-whisper if available
             try:
-                from faster_whisper import WhisperModel
-                self._whisper_model = WhisperModel(self.whisper_model_size)
+                import whisper
+                self._whisper_model = whisper.load_model(self.whisper_model_size)
                 return self._whisper_model
             except ImportError:
-                raise RuntimeError("Neither 'whisper' nor 'faster-whisper' is installed. Install openai-whisper to enable STT.")
+                raise RuntimeError("Neither 'faster-whisper' nor 'whisper' is installed. Install faster-whisper to enable STT.")
 
     def _load_tts(self):
         if self._tts_engine is not None:
