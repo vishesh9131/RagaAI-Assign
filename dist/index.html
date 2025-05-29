@@ -178,7 +178,7 @@
             <h2>🛠️ How to Use</h2>
             <p><strong>Example API Call:</strong></p>
             <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto;">
-curl -X POST https://your-netlify-site.netlify.app/api/intelligent/query \
+curl -X POST https://orch.netlify.app/api/intelligent/query \
   -H "Content-Type: application/json" \
   -d '{"query": "What is the current price of AAPL stock?", "voice_mode": false}'
             </pre>
@@ -188,8 +188,8 @@ curl -X POST https://your-netlify-site.netlify.app/api/intelligent/query \
             <h2>🚀 Try the Full App</h2>
             <p>Experience the complete AI Financial Assistant with a beautiful interface</p>
             <br>
-            <a href="https://your-streamlit-app.streamlit.app" target="_blank">
-                Launch Streamlit App →
+            <a href="#" onclick="testAPI()" style="background: #28a745;">
+                Test API Now →
             </a>
         </div>
         
@@ -200,25 +200,56 @@ curl -X POST https://your-netlify-site.netlify.app/api/intelligent/query \
     </div>
     
     <script>
-        // Simple API status check
-        fetch('/api/agents/status')
-            .then(response => response.json())
-            .then(data => {
+        // Enhanced API status check
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch('/api/agents/status');
+                const data = await response.json();
                 console.log('API Status:', data);
-                if (data.available_agents) {
+                
+                if (data.available_agents && data.available_agents.length > 0) {
                     document.querySelector('.status').innerHTML = 
                         '<strong>🟢 Status:</strong> API is online with ' + 
                         data.available_agents.length + ' active agents';
+                    document.querySelector('.status').style.background = '#d4edda';
+                    document.querySelector('.status').style.borderColor = '#c3e6cb';
+                    document.querySelector('.status').style.color = '#155724';
+                } else {
+                    throw new Error('No agents available');
                 }
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('API Status Check Failed:', error);
                 document.querySelector('.status').innerHTML = 
-                    '<strong>🔴 Status:</strong> API status check failed';
+                    '<strong>🔴 Status:</strong> API status check failed - ' + error.message;
                 document.querySelector('.status').style.background = '#f8d7da';
                 document.querySelector('.status').style.borderColor = '#f5c6cb';
                 document.querySelector('.status').style.color = '#721c24';
-            });
+            }
+        }
+
+        // Test API function
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/intelligent/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: "What is the current price of AAPL stock?",
+                        voice_mode: false
+                    })
+                });
+                
+                const data = await response.json();
+                alert('API Test Successful!\n\nResponse: ' + data.response + '\n\nConfidence: ' + data.confidence);
+            } catch (error) {
+                alert('API Test Failed: ' + error.message);
+            }
+        }
+
+        // Run status check on page load
+        checkAPIStatus();
     </script>
 </body>
 </html> 
