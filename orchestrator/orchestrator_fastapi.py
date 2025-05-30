@@ -621,7 +621,7 @@ async def process_intelligent_query(query: str, voice_mode: bool = False, includ
     update_execution_status(session_id, "Finalizing", "completed", 90.0)
 
     wav_audio_base64 = None
-    if voice_mode:
+        if voice_mode:
         try:
             # Use the main voice agent for TTS
             temp_audio_path = voice_agent_instance.text_to_speech(final_summary, output_filename="orchestrator_tts_output.wav")
@@ -630,18 +630,18 @@ async def process_intelligent_query(query: str, voice_mode: bool = False, includ
                     wav_audio_base64 = base64.b64encode(wav_file.read()).decode()
                 os.remove(temp_audio_path) # Clean up temp file
             update_execution_status(session_id, "Generated Voice Output", "completed", 95.0)
-        except Exception as e:
+            except Exception as e:
             print(f"Error generating TTS: {e}")
             # Proceed without audio if TTS fails
 
     final_response = IntelligentResponse(
         response_text=final_summary.strip(),
         agents_used=all_agent_results,
-        query_interpretation=query_interpretation,
+            query_interpretation=query_interpretation,
         wav_audio_base64=wav_audio_base64,
-        confidence=confidence,
-        session_id=session_id
-    )
+            confidence=confidence,
+            session_id=session_id
+        )
     update_execution_status(session_id, "Response Ready", "completed", 100.0)
     return final_response
 
