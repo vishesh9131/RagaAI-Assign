@@ -162,6 +162,19 @@ EXPLANATION:"""
             summary = self.client(text, max_length=200, min_length=30, do_sample=False)
             return f"Explanation for {target_audience}: {summary[0]['summary_text'].strip()}"
 
+    def get_status(self) -> Dict[str, str]:
+        """Return the current status of the LanguageAgent."""
+        status = {
+            "backend": self.backend,
+            "model_name": self.model_name if self.backend == "mistral" else "N/A (local)",
+            "local_model_initialized": "Yes" if self.local_model else "No"
+        }
+        if self.backend == "local" and self.local_model and hasattr(self.local_model, 'model') and hasattr(self.local_model.model, 'name_or_path'):
+            status["local_model_name"] = self.local_model.model.name_or_path
+        elif self.backend == "local" and self.local_model:
+             status["local_model_name"] = "Unknown (pipeline active)"
+        return status
+
 
 # Quick CLI test
 if __name__ == "__main__":

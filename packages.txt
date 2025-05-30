@@ -1,1 +1,3 @@
-# No system packages needed for HTTP-only Streamlit app
+ffmpeg
+libportaudio2
+libasound2-dev 

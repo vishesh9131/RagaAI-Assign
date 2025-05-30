@@ -1,7 +1,6 @@
 [build]
-  publish = "netlify_deployment/dist"
-  command = "echo 'Building AI Financial Assistant API with all 6 agents...'"
-  functions = "netlify_deployment/functions"
+  publish = "dist"
+  command = "echo 'Building AI Financial Assistant API...'"
 
 [build.environment]
   PYTHON_VERSION = "3.11"
@@ -27,3 +26,4 @@
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Headers = "Content-Type"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS" 
+ 

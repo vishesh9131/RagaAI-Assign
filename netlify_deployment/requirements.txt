@@ -1,6 +1,6 @@
 fastapi==0.104.1
 uvicorn==0.24.0
-pydantic==2.5.2
+pydantic==2.5.0
 requests==2.31.0
 numpy==1.24.3
 pandas==2.0.3
@@ -13,9 +13,7 @@ speechrecognition==3.10.0
 pydub==0.25.1
 mistralai==0.0.8
 python-multipart==0.0.6
-aiofiles==23.1.0
+aiofiles==23.2.1
 mangum==0.17.0
 torch==2.0.1
-transformers==4.30.2
-langchain==0.1.20
-tiktoken==0.5.1 
+transformers==4.30.2 
