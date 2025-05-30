@@ -28,7 +28,7 @@ import subprocess
 import os
 
 # Configuration - Use environment variables or secrets, fallback to deployed API
-ORCHESTRATOR_URL = os.environ.get("ORCHESTRATOR_URL") or st.secrets.get("ORCHESTRATOR_URL", "https://orch.netlify.app/api")
+ORCHESTRATOR_URL = os.environ.get("ORCHESTRATOR_URL") or st.secrets.get("ORCHESTRATOR_URL", "https://ai-financial-assistant-multi-agent.netlify.app/api")
 
 # Display deployment info in sidebar
 st.sidebar.info(f"🚀 Mode: Streamlit Cloud")
