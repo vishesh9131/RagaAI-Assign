@@ -20,34 +20,14 @@ try:
     agents = initialize_agents()
     print(f"Successfully initialized {len(agents)} agents: {list(agents.keys())}")
     
-    # Create the Mangum handler
+    # Create the Mangum handler - this is the main handler
     handler = Mangum(app, lifespan="off")
-    
-    def netlify_handler(event, context):
-        """Netlify function handler."""
-        try:
-            # Convert Netlify event to ASGI format
-            response = handler(event, context)
-            return response
-        except Exception as e:
-            print(f"Error in netlify_handler: {e}")
-            return {
-                "statusCode": 500,
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
-                },
-                "body": json.dumps({
-                    "error": "Internal server error",
-                    "message": str(e)
-                })
-            }
 
 except ImportError as e:
     print(f"Failed to import orchestrator: {e}")
     
-    # Fallback function if import fails
-    def netlify_handler(event, context):
+    # Fallback handler if import fails
+    def handler(event, context):
         return {
             "statusCode": 500,
             "headers": {

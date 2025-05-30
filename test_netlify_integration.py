@@ -8,7 +8,7 @@ import time
 
 # Test URLs
 BASE_URL = "https://ai-financial-assistant-multi-agent.netlify.app"
-API_BASE = f"{BASE_URL}/api"
+API_BASE = f"{BASE_URL}/.netlify/functions/orchestrator"
 
 def test_api_endpoints():
     """Test all API endpoints"""
