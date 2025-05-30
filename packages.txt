@@ -3,3 +3,4 @@ libportaudio2
 libasound2-dev 
 libgl1-mesa-glx
 libglib2.0-0
+libsndfile1

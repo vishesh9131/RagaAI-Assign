@@ -1,17 +1,6 @@
-#!/usr/bin/env python3
-"""
-AI Financial Assistant - Streamlit Cloud Deployment
-"""
-
 import streamlit as st
-import requests
-import base64
-import time
-import json
-import os
-from datetime import datetime
 
-# Configure page
+# Configure page FIRST - this must be the very first Streamlit command
 st.set_page_config(
     layout="wide", 
     page_title="🚀 AI Financial Assistant", 
@@ -19,16 +8,41 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Configuration
-ORCHESTRATOR_URL = os.environ.get("ORCHESTRATOR_URL") or st.secrets.get("ORCHESTRATOR_URL", "https://ai-financial-assistant-multi-agent.netlify.app/.netlify/functions/orchestrator")
+# Now import other libraries
+import requests
+import base64
+import time
+import json
+import threading
+from datetime import datetime, timedelta
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import pandas as pd
+import uuid
+from typing import Dict, List, Any
+import html
+import io
+import re
+import subprocess
+import os
 
-# Display deployment info
+# Configuration - Use environment variables or secrets, fallback to deployed API
+ORCHESTRATOR_URL = os.environ.get("ORCHESTRATOR_URL") or st.secrets.get("ORCHESTRATOR_URL")
+
+# Display deployment info in sidebar
 st.sidebar.info(f"🚀 Mode: Streamlit Cloud")
 st.sidebar.info(f"🌐 API: {ORCHESTRATOR_URL}")
 
-# CSS
+# Enhanced Custom CSS for modern design
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+    
     .main-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 2rem;
@@ -36,6 +50,17 @@ st.markdown("""
         color: white;
         margin-bottom: 2rem;
         box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    
+    .chat-container {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        max-height: 600px;
+        overflow-y: auto;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
     }
     
     .user-message {
@@ -59,13 +84,13 @@ st.markdown("""
         border-left: 4px solid #20c997;
     }
     
-    .warning-box {
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 8px;
-        padding: 16px;
-        margin: 16px 0;
-        color: #856404;
+    .input-container {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-top: 1rem;
+        border: 1px solid #e9ecef;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -75,8 +100,6 @@ if 'conversation' not in st.session_state:
     st.session_state.conversation = []
 if 'is_processing' not in st.session_state:
     st.session_state.is_processing = False
-if 'api_status' not in st.session_state:
-    st.session_state.api_status = "unknown"
 
 # Header
 st.markdown("""
@@ -86,51 +109,29 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-def check_api_status():
-    """Check if the API is working properly."""
-    try:
-        # Try multiple endpoints to find one that works
-        test_endpoints = [
-            f"{ORCHESTRATOR_URL}/agents/status",
-            f"{ORCHESTRATOR_URL}/",
-            ORCHESTRATOR_URL
-        ]
-        
-        for endpoint in test_endpoints:
-            try:
-                response = requests.get(endpoint, timeout=5)
-                if response.status_code == 200:
-                    # Check if it's JSON response
-                    try:
-                        data = response.json()
-                        if 'available_agents' in data or 'agents' in data:
-                            return "online", data
-                    except:
-                        # If not JSON, check if it's the API landing page
-                        if "AI Financial Assistant" in response.text:
-                            return "landing", None
-                        
-            except:
-                continue
-                
-        return "offline", None
-    except Exception as e:
-        return "error", str(e)
-
 def send_query_to_api(query: str = None, audio_file = None, voice_mode: bool = False):
-    """Send query to deployed API with enhanced error handling."""
+    """Send query to deployed API."""
     st.session_state.is_processing = True
     
     try:
         if audio_file:
+            # Voice query
             endpoint = f"{ORCHESTRATOR_URL}/intelligent/voice"
             files = {'audio': (audio_file.name, audio_file, audio_file.type)}
-            data = {'voice_mode': voice_mode, 'include_debug': False}
+            data = {
+                'voice_mode': voice_mode,
+                'include_debug': False
+            }
             response = requests.post(endpoint, files=files, data=data, timeout=120)
             st.session_state.conversation.append(("👤 User (🎤 audio)", "Uploaded an audio file"))
         elif query:
+            # Text query
             endpoint = f"{ORCHESTRATOR_URL}/intelligent/query"
-            payload = {"query": query, "voice_mode": voice_mode, "include_debug_info": False}
+            payload = {
+                "query": query,
+                "voice_mode": voice_mode,
+                "include_debug_info": False
+            }
             response = requests.post(endpoint, json=payload, timeout=120)
             st.session_state.conversation.append(("👤 User", query))
         else:
@@ -138,66 +139,68 @@ def send_query_to_api(query: str = None, audio_file = None, voice_mode: bool = F
             return
 
         if response.status_code == 200:
-            try:
-                data = response.json()
-                
-                # Handle different API response formats
-                if 'response_text' in data:
-                    response_text = data['response_text']
-                    confidence = data.get('confidence', 0.0)
-                    agents_used = data.get('agents_used', [])
-                elif 'response' in data:
-                    response_text = data['response']
-                    confidence = data.get('confidence', 0.0)
-                    agents_used = []
+            data = response.json()
+            
+            # Handle different API response formats
+            if 'response_text' in data:
+                # New format (orchestrator_fastapi.py)
+                response_text = data['response_text']
+                confidence = data.get('confidence', 0.0)
+                agents_used = data.get('agents_used', [])
+                query_interpretation = data.get('query_interpretation', '')
+                session_id = data.get('session_id', '')
+            elif 'response' in data:
+                # Current deployed format
+                response_text = data['response']
+                confidence = data.get('confidence', 0.0)
+                agents_used = []  # Not available in current format
+                query_interpretation = f"Query processed: {query}"
+                session_id = data.get('timestamp', '')
+            else:
+                st.error("Unexpected API response format")
+                st.json(data)  # Show the actual response for debugging
+                return
+            
+            # Add response to conversation
+            st.session_state.conversation.append((
+                f"🤖 Assistant", 
+                response_text,
+                {
+                    'confidence': confidence,
+                    'agents_used': agents_used,
+                    'query_interpretation': query_interpretation,
+                    'session_id': session_id
+                }
+            ))
+            
+            # Show success metrics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("🎯 Confidence", f"{confidence:.1%}")
+            with col2:
+                st.metric("🤖 Agents Used", len(agents_used) if agents_used else "N/A")
+            with col3:
+                if agents_used:
+                    successful_count = len([a for a in agents_used if a.get('status') == 'completed'])
+                    st.metric("✅ Success Rate", f"{successful_count}/{len(agents_used)}")
                 else:
-                    st.error("Unexpected API response format")
-                    st.json(data)
-                    return
-                
-                # Add response to conversation
-                st.session_state.conversation.append((
-                    f"🤖 Assistant", 
-                    response_text,
-                    {'confidence': confidence, 'agents_used': agents_used}
-                ))
-                
-                # Show metrics
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("🎯 Confidence", f"{confidence:.1%}")
-                with col2:
-                    st.metric("🤖 Agents Used", len(agents_used) if agents_used else "N/A")
-                with col3:
                     st.metric("✅ API Status", "Online")
-                
-                # Play audio if available
-                if data.get('wav_audio_base64'):
-                    st.success("🔊 Audio response generated!")
-                    audio_bytes = base64.b64decode(data['wav_audio_base64'])
-                    st.audio(audio_bytes, format="audio/wav")
-                    
-            except json.JSONDecodeError:
-                st.error("API returned invalid JSON response")
-                st.text(f"Response: {response.text[:500]}...")
+            
+            # Play audio if available
+            if data.get('wav_audio_base64'):
+                st.success("🔊 Audio response generated!")
+                audio_bytes = base64.b64decode(data['wav_audio_base64'])
+                st.audio(audio_bytes, format="audio/wav")
         else:
-            st.error(f"API Error: {response.status_code}")
-            if response.text:
-                st.text(f"Response: {response.text[:200]}...")
+            st.error(f"API Error: {response.status_code} - {response.text}")
             
     except requests.exceptions.Timeout:
         st.error("⏰ Request timed out. The query might be too complex.")
     except requests.exceptions.RequestException as e:
         st.error(f"🚫 Connection error: {e}")
-        # Provide fallback response
-        fallback_response = f"I apologize, but I'm currently unable to connect to the AI backend. However, I can tell you that your query '{query}' appears to be about financial topics. Please try again in a moment, or check if the API service is running."
-        st.session_state.conversation.append((
-            f"🤖 Assistant (Offline Mode)", 
-            fallback_response,
-            {'confidence': 0.0, 'agents_used': []}
-        ))
     except Exception as e:
         st.error(f"💥 Unexpected error: {e}")
+        st.write("Debug info:", str(e))
     finally:
         st.session_state.is_processing = False
 
@@ -230,52 +233,47 @@ def display_conversation():
                             status_icon = "✅" if status == "completed" else "❌" if status == "failed" else "⏳"
                             st.markdown(f"**{status_icon} {agent_name}**: {description}")
 
-# Check API status
-api_status, api_data = check_api_status()
-st.session_state.api_status = api_status
-
 # Sidebar
 with st.sidebar:
     st.subheader("🎛️ Control Center")
     
     # Connection status
-    if api_status == "online":
-        st.success("🟢 API Online")
-        st.subheader("🤖 Available Agents")
-        if api_data and 'available_agents' in api_data:
-            agents = api_data['available_agents']
-            for agent in agents:
-                agent_name = agent.get('name', 'Unknown Agent')
-                st.markdown(f"✅ **{agent_name}**")
+    try:
+        status_response = requests.get(f"{ORCHESTRATOR_URL}/agents/status", timeout=10)
+        if status_response.status_code == 200:
+            status_data = status_response.json()
+            st.success("🟢 API Online")
+            
+            st.subheader("🤖 Available Agents")
+            # Handle different status response formats
+            if 'available_agents' in status_data:
+                agents = status_data['available_agents']
+                for agent in agents:
+                    agent_name = agent.get('name', 'Unknown Agent')
+                    agent_status = agent.get('status', 'unknown')
+                    capabilities = agent.get('capabilities', [])
+                    cap_text = ', '.join(capabilities[:2]) if capabilities else 'AI processing'
+                    st.markdown(f"✅ **{agent_name}** - {agent_status}")
+                    st.caption(f"🔧 {cap_text}")
+            else:
+                # Fallback for simple status
+                st.markdown("✅ **AI Financial Assistant** - active")
+                st.caption("🔧 Financial analysis, market data")
         else:
-            st.markdown("✅ **AI Financial Assistant** - active")
-    elif api_status == "landing":
-        st.warning("🟡 API Landing Page Detected")
-        st.caption("API is deployed but endpoints may need configuration")
-    elif api_status == "offline":
-        st.error("🔴 API Offline")
-        st.caption("Unable to connect to the backend API")
-    else:
+            st.error("🔴 API Offline")
+    except Exception as e:
         st.error("🔴 Connection Failed")
-        st.caption("Error checking API status")
+        st.caption(f"Error: {str(e)[:50]}...")
     
     st.subheader("⚙️ Settings")
     voice_mode = st.toggle("🔊 Voice Output", value=False, help="Enable AI voice responses")
-
-# Show API status warning if needed
-if api_status != "online":
-    st.markdown("""
-    <div class="warning-box">
-        <strong>⚠️ API Status Notice:</strong><br>
-        The backend API is currently not fully accessible. You can still use the interface, 
-        but responses may be limited. The app will attempt to reconnect automatically.
-    </div>
-    """, unsafe_allow_html=True)
 
 # Main interface
 display_conversation()
 
 # Input area
+st.markdown('<div class="input-container">', unsafe_allow_html=True)
+
 col1, col2 = st.columns([3, 1])
 
 with col1:
@@ -318,6 +316,8 @@ with col2:
         st.session_state.conversation = []
         st.rerun()
 
+st.markdown('</div>', unsafe_allow_html=True)
+
 # Footer
 st.markdown("---")
 st.markdown("""
@@ -330,4 +330,4 @@ st.markdown("""
         Deployed on Streamlit Cloud • API on Netlify • Real-time Financial Intelligence
     </p>
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True) 

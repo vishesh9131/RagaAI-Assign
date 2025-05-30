@@ -626,13 +626,13 @@ async def process_intelligent_query(query: str, voice_mode: bool = False, includ
             # Use the main voice agent for TTS
             temp_audio_path = voice_agent_instance.text_to_speech(final_summary, output_filename="orchestrator_tts_output.wav")
             if temp_audio_path and os.path.exists(temp_audio_path):
-                    with open(temp_audio_path, "rb") as wav_file:
-                        wav_audio_base64 = base64.b64encode(wav_file.read()).decode()
-                    os.remove(temp_audio_path) # Clean up temp file
-                    update_execution_status(session_id, "Generated Voice Output", "completed", 95.0)
+                with open(temp_audio_path, "rb") as wav_file:
+                    wav_audio_base64 = base64.b64encode(wav_file.read()).decode()
+                os.remove(temp_audio_path) # Clean up temp file
+            update_execution_status(session_id, "Generated Voice Output", "completed", 95.0)
         except Exception as e:
-                print(f"Error generating TTS: {e}")
-                # Proceed without audio if TTS fails
+            print(f"Error generating TTS: {e}")
+            # Proceed without audio if TTS fails
 
     final_response = IntelligentResponse(
         response_text=final_summary.strip(),
