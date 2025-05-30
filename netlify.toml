@@ -4,7 +4,7 @@
   functions = "netlify_deployment/functions"
 
 [build.environment]
-  PYTHON_VERSION = "3.11"
+  PYTHON_VERSION = "3.9"
   NODE_VERSION = "18"
 
 [[redirects]]
